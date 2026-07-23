@@ -2,7 +2,7 @@ name: Quicksilver CI
 
 on:
   push:
-    branches: [ main, day-one-foundation ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -21,6 +21,7 @@ jobs:
           test -d Nexus || (echo "Missing Nexus/" && exit 1)
           test -d UI || (echo "Missing UI/" && exit 1)
           test -d Tests || (echo "Missing Tests/" && exit 1)
+          test -f Package.swift || (echo "Missing Package.swift" && exit 1)
           echo "Structure OK"
 
       - name: Check for required source files
@@ -35,10 +36,25 @@ jobs:
           test -f UI/ContentView.swift
           echo "Core files present"
 
-  # Full Xcode build/test requires macOS runner + generated .xcodeproj.
-  # Day One: structure validation only.
-  # Day Two+: add xcodebuild once project.pbxproj exists (or switch to xcodegen).
-  note:
-    runs-on: ubuntu-latest
+  core-tests:
+    runs-on: macos-14
     steps:
-      - run: echo "iOS build job deferred until Xcode project is generated. See Documentation/ARCHITECTURE.md"
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build and test QuicksilverCore
+        run: |
+          swift package resolve
+          swift test --enable-code-coverage 2>&1 | tee test-output.txt
+        continue-on-error: false
+
+      - name: Summarize
+        if: always()
+        run: |
+          echo "=== Test summary ==="
+          grep -E "Test Suite|passed|failed|error:" test-output.txt || true

@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class PersonaManagerTests: XCTestCase {
 
-    // MARK: - Existing explicit API
+    // MARK: - Explicit API
 
     func testInitialPersonaIsQuicksilver() {
         let bus = EventBus()
@@ -32,60 +32,85 @@ final class PersonaManagerTests: XCTestCase {
         } catch { }
     }
 
-    // MARK: - Decision Policy (pure)
+    // MARK: - Context-aware Decision Policy
 
-    func testPolicyPrefersForgeOnLowBattery() {
+    func testTaskKindBuildingPrefersForge() {
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(taskKind: .building)
         let result = policy.preferredPersona(
             current: .quicksilver,
             lastSwitchedAt: nil,
-            focusName: nil,
-            timePeriod: nil,
-            batteryLevel: 0.12,
-            isLowPower: true,
-            thermalState: nil
+            context: context
         )
         XCTAssertEqual(result?.id, "forge")
     }
 
-    func testPolicyPrefersEternalAtNight() {
+    func testQueryIntentReflectivePrefersEternal() {
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(queryIntent: .reflective)
         let result = policy.preferredPersona(
             current: .quicksilver,
             lastSwitchedAt: nil,
-            focusName: nil,
-            timePeriod: .night,
-            batteryLevel: 0.8,
-            isLowPower: false,
-            thermalState: nil
+            context: context
         )
         XCTAssertEqual(result?.id, "eternal")
     }
 
-    func testPolicyRespectsDwellTime() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 60 * 60) // 1 hour
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: Date(), // just switched
-            focusName: "Work",
-            timePeriod: .morning,
-            batteryLevel: 0.9,
-            isLowPower: false,
-            thermalState: nil
-        )
-        XCTAssertNil(result, "Should not switch while inside dwell window")
-    }
-
-    func testPolicyFocusWorkMapsToForge() {
+    func testTaskDescriptionArchitecturePrefersForge() {
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(taskDescription: "Review the architecture decision")
         let result = policy.preferredPersona(
             current: .quicksilver,
             lastSwitchedAt: nil,
-            focusName: "Deep Work",
-            timePeriod: nil,
-            batteryLevel: 0.9,
-            isLowPower: false,
-            thermalState: nil
+            context: context
+        )
+        XCTAssertEqual(result?.id, "forge")
+    }
+
+    func testRecentMemoryHintsPreferEternal() {
+        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(recentMemoryHints: ["prior goal: ship core layer"])
+        let result = policy.preferredPersona(
+            current: .quicksilver,
+            lastSwitchedAt: nil,
+            context: context
+        )
+        XCTAssertEqual(result?.id, "eternal")
+    }
+
+    func testEnvironmentalFallbackStillWorks() {
+        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(isLowPower: true, batteryLevel: 0.12)
+        let result = policy.preferredPersona(
+            current: .quicksilver,
+            lastSwitchedAt: nil,
+            context: context
+        )
+        XCTAssertEqual(result?.id, "forge")
+    }
+
+    func testDwellTimeStillRespected() {
+        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 3600)
+        let context = PersonaContext(taskKind: .building)
+        let result = policy.preferredPersona(
+            current: .quicksilver,
+            lastSwitchedAt: Date(),
+            context: context
+        )
+        XCTAssertNil(result)
+    }
+
+    func testTaskContextBeatsTimeOfDay() {
+        // Even at night, an explicit building task should win
+        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
+        let context = PersonaContext(
+            taskKind: .building,
+            timePeriod: .night
+        )
+        let result = policy.preferredPersona(
+            current: .eternal,
+            lastSwitchedAt: nil,
+            context: context
         )
         XCTAssertEqual(result?.id, "forge")
     }

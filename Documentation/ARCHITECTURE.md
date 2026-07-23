@@ -3,89 +3,67 @@
 ## Vision
 Quicksilver is the intelligence core of the Mercury ecosystem: a modular native iOS assistant focused on personality, automation, diagnostics, and user control.
 
-## Module Map (Current)
+## Current Status (Stabilization Pass)
+
+The foundation, Core Intelligence Layer, and Nexus perception layer are in place and have been stabilized for:
+
+- Correct NotificationCenter observer lifecycle
+- Cleaner health scoring
+- PersonaRegistry as single source of truth
+- Expanded unit tests
+- Improved CI structure validation
+
+## Module Map
 
 ```
 Quicksilver/
 ├── App/                  # @main + DependencyContainer
-├── Core/                 # Environment, FeatureFlags, LoggerService, EventBus, Config, Errors
-├── Personas/             # Configuration, State, Manager + concrete personas
+├── Core/                 # AppConfiguration, AppError, FeatureFlags, LoggerService, EventBus
+├── Personas/             # PersonaConfiguration, PersonaRegistry, PersonaManager, State
 ├── Memory/               # Local-first MemoryItem / Store / Manager
 ├── Services/AI/          # Provider abstraction + Mock
-├── Nexus/                # Awareness / perception layer
+├── Nexus/                # Perception layer (Signals → Insights)
 ├── UI/
-├── Models/ / Resources/ / Tests/
+└── Tests/
 ```
 
 ## Nexus Philosophy
 
-Nexus is **not** a traditional monitoring dashboard.  
-It is Quicksilver’s **perception layer** — a privacy-first awareness system that:
+Nexus is Quicksilver’s **perception layer**. It observes only public signals, normalizes them, interprets patterns into insights, and applies persona voice only at presentation time.
 
-1. Observes only signals available through public Apple APIs.
-2. Normalizes them into a unified `Signal` model.
-3. Interprets patterns into human-readable `Insight`s.
-4. Applies persona voice at presentation time only.
-5. Never collects data without a clear purpose.
+### Fixed Issues (this pass)
 
-### Signal Architecture
-
-```
-Monitor → raw observation
-    ↓
-SignalProcessor → normalized Signal
-    ↓
-NexusCoordinator → appends to NexusState + asks InsightEngine
-    ↓
-Insight (persona-styled) → stored in NexusState for UI / future AI
-```
+| Issue | Fix |
+|-------|-----|
+| DeviceMetricsMonitor block observers leaked | Tokens stored and correctly removed in `stop()` |
+| Health score only used network + battery | Extracted `HealthScoreCalculator` with network / power / storage / device |
+| Persona identity scattered | `PersonaRegistry` is now the single lookup source |
+| Missing observer cleanup on deinit | Both Battery and Device monitors call `stop()` in `deinit` |
 
 ### Privacy & Capability Boundaries
 
-**Available (public APIs only):**
-- Network path (Network.framework)
-- Battery level & state (UIDevice, monitoring enabled explicitly)
-- Free / total storage (FileManager)
-- Thermal state & Low Power Mode (ProcessInfo)
+**Available:** Network path, Battery (explicit), Storage (FileManager), Thermal + Low Power Mode (ProcessInfo)
 
-**Explicitly unavailable / not implemented:**
-- Continuous background location
-- Private sysctl / kernel metrics
-- Other apps’ process lists
-- Always-on high-frequency sampling
-- Any data that leaves the device
+**Not available / not implemented:** Private APIs, continuous background location, other apps’ processes, high-frequency sampling, any data leaving the device.
 
-MetricKit is prepared for a later milestone but is not required for current insights.
+### Health Scoring
 
-### Insight Pipeline
-- Insights are generated only when a signal is meaningful.
-- Persona styling (Forge / Quicksilver / Eternal) is applied as a final presentation step.
-- The data layer remains persona-agnostic.
+`HealthScoreCalculator` is pure and testable. Weights: Network 35 %, Power 35 %, Storage 15 %, Device 15 %.
 
-### EventBus Discipline
-- EventBus is used sparingly and only for meaningful cross-module state changes.
-- Nexus prefers direct method calls for its internal pipeline.
-- No universal “dumping ground” events.
+### Persona Architecture
 
-### AutomationBridge
-- Explicit surface for future App Intents and Shortcuts.
-- No unsupported background work is claimed or implemented.
+- `PersonaConfiguration` remains the data model.
+- `PersonaRegistry` owns lookup and validation.
+- `PersonaManager` consumes the registry.
+- Concrete `ForgePersona` / `QuicksilverPersona` / `EternalPersona` kept only for temporary UI bridge compatibility.
 
-## Trade-offs
+## Known Limitations
 
-| Decision                    | Benefit                          | Cost                              |
-|----------------------------|----------------------------------|-----------------------------------|
-| Low-frequency storage poll | Battery friendly                 | Slightly delayed storage insights |
-| Persona styling at end     | Clean data layer                 | Slight duplication of body text   |
-| No MetricKit yet           | Zero extra entitlement surface   | Fewer performance signals         |
-| Bounded history            | Memory safe                      | Limited long-term pattern analysis|
-
-## Future Expansion
-- Richer PersonaProfile (Identity, Traits, Capabilities, MemoryPermissions, AIBehavior)
-- MetricKit subscribers
-- App Intents for user-triggered diagnostics
-- SwiftData-backed signal history
-- On-device model for deeper pattern recognition
+- No `.xcodeproj` yet → full `xcodebuild` and device tests cannot run in CI.
+- Storage sampling is polled (FileManager has no change notification).
+- Battery level is –1 when monitoring is unavailable.
+- AutomationBridge still throws until real App Intents are registered.
+- Long-term signal history is in-memory and bounded.
 
 ## Engineering Rules Applied
-Analyze first • Public APIs only • Battery & privacy first • Modular boundaries • Focused commits • Clear documentation of limitations.
+Analyze first • Public APIs only • Battery & privacy first • Modular boundaries • Focused commits • Clear documentation of limitations and fixes.

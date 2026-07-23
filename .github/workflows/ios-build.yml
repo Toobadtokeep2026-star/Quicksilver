@@ -1,0 +1,42 @@
+name: iOS Build & Test
+
+on:
+  push:
+    branches: [ main, stabilization-pass ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  structure-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required modules exist
+        run: |
+          echo "Checking core modules..."
+          test -d App && test -d Core && test -d Personas && test -d Nexus && test -d Memory && test -d Services
+          test -f App/DependencyContainer.swift
+          test -f Core/AppConfiguration.swift
+          test -f Core/AppError.swift
+          test -f Nexus/NexusCoordinator.swift
+          test -f Nexus/HealthScoreCalculator.swift
+          test -f Personas/PersonaRegistry.swift
+          test -f Personas/PersonaManager.swift
+          echo "Structure OK"
+
+      - name: Verify critical source files compile-ready
+        run: |
+          grep -q "enum AppError" Core/AppError.swift
+          grep -q "struct AppConfiguration" Core/AppConfiguration.swift
+          grep -q "struct HealthScoreCalculator" Nexus/HealthScoreCalculator.swift
+          grep -q "struct PersonaRegistry" Personas/PersonaRegistry.swift
+          grep -q "thermalObserver" Nexus/DeviceMetricsMonitor.swift
+          echo "Critical symbols present"
+
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Full xcodebuild is deferred until a .xcodeproj is generated."
+          echo "This workflow currently validates structure and critical symbols."

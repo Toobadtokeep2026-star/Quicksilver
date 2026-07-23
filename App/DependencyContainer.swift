@@ -26,10 +26,14 @@ final class DependencyContainer: ObservableObject {
         self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
 
         self.aiService = AIService(eventBus: eventBus, logger: logger, featureFlags: featureFlags)
-        self.nexus = NexusCoordinator()
+
+        self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
+
+        Task {
+            self.nexus.updatePersonaContext(self.personaManager.activeConfiguration.id)
+        }
     }
 
-    /// Temporary bridge for Day One UI compatibility.
     var activePersona: any Persona {
         switch personaManager.activeConfiguration.id {
         case "forge": return ForgePersona()
@@ -41,6 +45,7 @@ final class DependencyContainer: ObservableObject {
     func switchPersona(to persona: any Persona) {
         Task {
             try? await personaManager.switchTo(id: persona.id)
+            nexus.updatePersonaContext(persona.id)
             objectWillChange.send()
         }
     }

@@ -1,4 +1,6 @@
 import Foundation
+import Combine
+import Core
 
 @MainActor
 final class AIService: ObservableObject {

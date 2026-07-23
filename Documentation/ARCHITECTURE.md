@@ -4,79 +4,106 @@
 
 Quicksilver is the intelligence core of the Mercury ecosystem: a modular native iOS assistant focused on personality, automation, diagnostics, and user control.
 
-## Day One Module Map
+## Module Map (Day Two — Core Intelligence Layer)
 
 ```
 Quicksilver/
-├── App/                  # @main entry, DependencyContainer
-├── Core/                 # Configuration, errors, logging
-├── Models/               # Shared domain models (empty Day One)
-├── Services/             # AI providers, networking, integrations (empty Day One)
-├── Personas/             # Identity layer (protocol + concrete personas)
-├── Nexus/                # Monitoring + automation hub
-├── UI/                   # SwiftUI views only
-├── Resources/            # Assets, plists (empty Day One)
-└── Tests/                # XCTest targets
+├── App/                      # @main + DependencyContainer (composition root)
+├── Core/                     # Environment, FeatureFlags, LoggerService, EventBus, Config, Errors
+├── Personas/                 # PersonaConfiguration, PersonaState, PersonaManager + concrete personas
+├── Memory/                   # MemoryItem, MemoryStore protocol, MemoryManager (local-first)
+├── Services/
+│   └── AI/                   # AIProvider protocol, AIRequest/Response, AIService + MockAIProvider
+├── Nexus/                    # Monitoring + automation (unchanged from Day One)
+├── UI/                       # SwiftUI only
+├── Models/                   # Shared domain models
+├── Resources/
+└── Tests/
 ```
 
-## Responsibility Boundaries
+## Core Intelligence Layer
 
-| Module     | Owns                                      | Must Not Own                  |
-|------------|-------------------------------------------|-------------------------------|
-| App        | Lifecycle, DI root                        | Business logic                |
-| Core       | Config, errors, logging primitives        | UI, networking                |
-| Personas   | Identity, prompts, behavioral intent      | Views, network calls          |
-| Nexus      | System/network health, automation surface | Persona switching, UI         |
-| Services   | External I/O, AI adapters                 | UI state, persona definitions |
-| UI         | Presentation                              | Business rules, persistence   |
-| Models     | Pure data structures                      | Side effects                  |
+### Dependency Management
+- `DependencyContainer` remains the single composition root (lives in App/).
+- All long-lived services are created here and injected.
+- No hidden singletons except intentional shared configuration.
 
-## Dependency Direction
+### FeatureFlags
+- Simple, UserDefaults-backed, observable.
+- Controls AI enablement, detailed metrics, experimental features.
+- Ready for remote config later without API changes.
+
+### EventBus
+- Actor-based, in-process pub/sub.
+- Decouples PersonaManager, MemoryManager, AIService, and future modules.
+- Events are strongly typed.
+
+### LoggerService
+- Injectable wrapper around OSLog.
+- Categories: General, Nexus, Persona, Memory, AI, UI.
+- Replaces pure static logger for testability.
+
+## Persona Engine
+
+- **PersonaConfiguration** — pure data (Codable, Sendable). Traits, temperature hints, system prompts live here.
+- **PersonaState** — runtime session state (interaction count, switch timestamps).
+- **PersonaManager** — owns switching, publishes events, records interactions.
+- Concrete Day One persona structs kept for UI compatibility; new code should prefer the Manager + Configuration path.
+- Personas remain interchangeable and free of UI or network code.
+
+## Memory Foundation
+
+- Local-first, privacy-first.
+- `MemoryStore` protocol → currently `UserDefaultsMemoryStore`.
+- Categories: preference, conversation, project, system, temporary.
+- Ready to swap the store for SwiftData or file-based persistence later without changing callers.
+- No cloud, no network.
+
+## AI Service Abstraction
+
+- `AIProvider` protocol is the only contract a backend must satisfy.
+- `AIService` is the facade used by the rest of the app.
+- `MockAIProvider` ships for offline development and unit tests.
+- Feature flag `aiServiceEnabled` gates real providers.
+- Temperature / maxTokens hints come from the active PersonaConfiguration.
+
+## Dependency Direction (updated)
 
 ```
-UI → App/DependencyContainer → (Personas | Nexus | Core)
-Services → Core
-Nexus → Core
-Personas → (none)
+UI → DependencyContainer
+       ├── PersonaManager → EventBus, Logger
+       ├── MemoryManager  → MemoryStore, EventBus, Logger
+       ├── AIService      → AIProvider, EventBus, Logger, FeatureFlags
+       ├── NexusCoordinator
+       └── FeatureFlags, LoggerService, EventBus, AppConfiguration
 ```
 
-No cycles. UI never imports Nexus or Personas directly beyond what the container exposes.
+No cycles. UI never reaches into MemoryStore or AIProvider directly.
 
-## Key Design Decisions (Day One)
+## Testing Strategy (expanded)
 
-1. **Personas are pure value types conforming to a protocol.**  
-   No `@ObservedObject` or UI coupling. System prompts live here for future LLM integration.
+- Persona switching (success + unknown ID)
+- Memory set / load / delete
+- AI mock completion
+- DependencyContainer wiring
 
-2. **DependencyContainer is the single composition root.**  
-   Created once at app launch, injected via `@EnvironmentObject`. Easy to replace in tests.
+## Trade-offs (Day Two)
 
-3. **Nexus uses only public Apple APIs.**  
-   `NWPathMonitor` is live. SystemMonitor and AutomationManager are explicit placeholders with comments naming the future public APIs (ProcessInfo, MetricKit, App Intents).
+| Decision                        | Benefit                              | Cost / Limitation                     |
+|---------------------------------|--------------------------------------|---------------------------------------|
+| UserDefaults for memory         | Zero setup, private, fast            | Not ideal for large conversation history |
+| Actor EventBus                  | Thread-safe, simple                  | Not as rich as Combine for UI binding |
+| MockAIProvider always available | Offline development & tests          | Real providers still behind flag      |
+| Keep old Persona protocol       | Day One UI continues to work         | Temporary dual path                   |
 
-4. **No third-party dependencies.**  
-   SwiftUI + Foundation + Network + OSLog only.
+## Future (explicit)
 
-5. **Target baseline: iOS 17.0.**  
-   Compatible with iPhone 14 and forward (including iOS 27 beta). Uses modern concurrency annotations (`@MainActor`, `Sendable`).
-
-6. **Error surface is typed (`AppError`).**  
-   Prevents stringly-typed failures and enables future localized user messaging.
-
-## Future Expansion Points (explicitly marked)
-
-- App Intents + App Shortcuts for AutomationManager
-- MetricKit / ProcessInfo sampling in SystemMonitor
-- Real AI provider in Services/ (with privacy boundaries)
-- Color assets matching `accentColorName` on each persona
-- Persistence (SwiftData or Core Data) behind a protocol in Services or Core
-- Background tasks only after entitlement justification
-
-## Testing Strategy
-
-- Unit tests for pure logic (personas, configuration, Nexus lifecycle)
-- UI tests deferred until the shell stabilizes
-- Prefer protocol-based fakes over heavy mocking
+- Swap MemoryStore → SwiftData
+- Real AI providers (local + cloud) behind the same protocol
+- PersonaManager can load custom configurations from disk
+- EventBus can gain typed subscribers / filtering
+- FeatureFlags can sync from a remote source
 
 ## Engineering Rules Applied
 
-All changes follow the Quicksilver Engineering Rules: analyze before coding, production quality, critical review of designs, modular boundaries, focused commits, and clear documentation of what changed and why.
+Analyze before coding • Production quality • Critical review • Modular boundaries • Focused commits • Clear documentation of changes and why.

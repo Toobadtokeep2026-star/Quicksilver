@@ -2,6 +2,7 @@ import AppIntents
 import Foundation
 import Core
 import Personas
+import ServicesAI
 
 // MARK: - Get Current Persona (primary read surface)
 
@@ -72,7 +73,6 @@ public struct CaptureMemoryIntent: AppIntent {
             throw AppError.nexusNotReady
         }
 
-        // Memory work is continuity-oriented → tilt toward Eternal
         manager.updateTaskContext(
             description: "Capture memory: \(String(content.prefix(80)))",
             kind: .reflecting,
@@ -109,7 +109,7 @@ public struct GetContextIntent: AppIntent {
     }
 }
 
-// MARK: - Query Nexus
+// MARK: - Query Nexus (now wired to AIService)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
@@ -127,11 +127,12 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
+        guard let manager = IntentDependencies.shared.personaManager,
+              let ai = IntentDependencies.shared.aiService else {
             throw AppError.nexusNotReady
         }
 
-        // Infer rough intent from the query text so the policy can choose appropriately
+        // 1. Infer task context so the autonomous policy can switch if needed
         let lower = query.lowercased()
         let intent: QueryIntent
         let kind: TaskKind
@@ -159,9 +160,16 @@ public struct QueryNexusIntent: AppIntent {
             queryIntent: intent
         )
 
-        let persona = manager.activeConfiguration.displayName
-        // Placeholder — later routes through ServicesAI + persona system prompt
-        return .result(value: "[\(persona)] Received: \(query). Full AI path not yet wired.")
+        // 2. Use the (possibly newly selected) persona’s system prompt + temperature
+        let config = manager.activeConfiguration
+        let response = try await ai.complete(
+            prompt: query,
+            systemPrompt: config.systemPrompt,
+            temperature: config.preferredTemperature,
+            maxTokens: config.maxTokensHint
+        )
+
+        return .result(value: "[\(config.displayName)] \(response.content)")
     }
 
     private func containsAny(_ text: String, _ keywords: [String]) -> Bool {

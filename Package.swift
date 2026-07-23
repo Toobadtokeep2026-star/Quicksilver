@@ -12,6 +12,10 @@ let package = Package(
             name: "QuicksilverCore",
             targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]
         ),
+        .library(
+            name: "QuicksilverIntents",
+            targets: ["QuicksilverIntents"]
+        ),
     ],
     targets: [
         .target(
@@ -39,6 +43,11 @@ let package = Package(
             dependencies: ["Core"],
             path: "Nexus"
         ),
+        .target(
+            name: "QuicksilverIntents",
+            dependencies: ["Core", "Personas", "Nexus", "Memory"],
+            path: "Intents"
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
             dependencies: [
@@ -49,7 +58,7 @@ let package = Package(
                 "Nexus"
             ],
             path: "Tests",
-            exclude: [] // All current tests will be adapted to core modules
+            exclude: []
         ),
     ]
 )

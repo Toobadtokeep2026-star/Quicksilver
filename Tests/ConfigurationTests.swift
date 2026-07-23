@@ -1,5 +1,5 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
 
 final class ConfigurationTests: XCTestCase {
     func testSharedConfigurationDefaults() {

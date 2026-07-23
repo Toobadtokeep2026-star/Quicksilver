@@ -1,21 +1,24 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
+@testable import Nexus
 
 @MainActor
 final class NexusTests: XCTestCase {
     func testNexusStartsAndStopsCleanly() {
-        let nexus = NexusCoordinator()
-        XCTAssertFalse(nexus.isActive)
+        let logger = LoggerService()
+        let bus = EventBus()
+        let nexus = NexusCoordinator(logger: logger, eventBus: bus)
+        XCTAssertFalse(nexus.state.isActive)
 
         nexus.start()
-        XCTAssertTrue(nexus.isActive)
+        XCTAssertTrue(nexus.state.isActive)
 
         // Idempotent start
         nexus.start()
-        XCTAssertTrue(nexus.isActive)
+        XCTAssertTrue(nexus.state.isActive)
 
         nexus.stop()
-        XCTAssertFalse(nexus.isActive)
+        XCTAssertFalse(nexus.state.isActive)
     }
 
     func testAutomationManagerThrowsUnsupported() {

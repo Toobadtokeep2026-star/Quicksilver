@@ -1,5 +1,5 @@
 import XCTest
-@testable import Quicksilver
+@testable import Personas
 
 /// Basic persona contract tests.
 /// These verify initialization and protocol conformance without UI or network.

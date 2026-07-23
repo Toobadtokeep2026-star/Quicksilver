@@ -1,0 +1,35 @@
+name: Prune Merged Branches
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday 09:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions tab
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete merged branches
+        run: |
+          # Never touch these
+          PROTECTED="main|develop|master|HEAD"
+
+          git branch -r --merged origin/main \
+            | grep -vE "origin/($PROTECTED)" \
+            | sed 's|origin/||' \
+            | while read branch; do
+                if [ -n "$branch" ]; then
+                  echo "Deleting merged branch: $branch"
+                  git push origin --delete "$branch" || true
+                fi
+              done

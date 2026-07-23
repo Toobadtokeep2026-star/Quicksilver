@@ -1,5 +1,6 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
+@testable import Personas
 
 @MainActor
 final class PersonaManagerTests: XCTestCase {

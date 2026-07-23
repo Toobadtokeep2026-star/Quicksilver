@@ -68,12 +68,19 @@ public struct CaptureMemoryIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let memory = IntentDependencies.shared.memoryManager else {
+        guard let manager = IntentDependencies.shared.personaManager else {
             throw AppError.nexusNotReady
         }
-        // Minimal capture path — MemoryManager API will refine later
+
+        // Memory work is continuity-oriented → tilt toward Eternal
+        manager.updateTaskContext(
+            description: "Capture memory: \(String(content.prefix(80)))",
+            kind: .reflecting,
+            queryIntent: .reflective,
+            memoryHints: [String(content.prefix(120))]
+        )
+
         let truncated = String(content.prefix(500))
-        // Placeholder until MemoryManager has a clean public capture method
         IntentDependencies.shared.logger?.info("Memory capture: \(truncated)", category: IntentDependencies.shared.logger?.memory)
         return .result(value: "Captured: \(truncated)")
     }
@@ -102,7 +109,7 @@ public struct GetContextIntent: AppIntent {
     }
 }
 
-// MARK: - Query Nexus (placeholder for AI path)
+// MARK: - Query Nexus
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
@@ -120,12 +127,45 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard IntentDependencies.shared.personaManager != nil else {
+        guard let manager = IntentDependencies.shared.personaManager else {
             throw AppError.nexusNotReady
         }
-        // Placeholder — will later route through ServicesAI + current persona system prompt
-        let persona = IntentDependencies.shared.personaManager?.activeConfiguration.displayName ?? "unknown"
+
+        // Infer rough intent from the query text so the policy can choose appropriately
+        let lower = query.lowercased()
+        let intent: QueryIntent
+        let kind: TaskKind
+
+        if containsAny(lower, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision"]) {
+            intent = .preciseTechnical
+            kind = .building
+        } else if containsAny(lower, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity"]) {
+            intent = .reflective
+            kind = .reflecting
+        } else if containsAny(lower, ["idea", "brainstorm", "what if", "explore", "creative", "option", "strategy"]) {
+            intent = .creative
+            kind = .exploring
+        } else if containsAny(lower, ["diagnose", "why is", "broken", "failing"]) {
+            intent = .diagnostic
+            kind = .debugging
+        } else {
+            intent = .strategic
+            kind = .exploring
+        }
+
+        manager.updateTaskContext(
+            description: query,
+            kind: kind,
+            queryIntent: intent
+        )
+
+        let persona = manager.activeConfiguration.displayName
+        // Placeholder — later routes through ServicesAI + persona system prompt
         return .result(value: "[\(persona)] Received: \(query). Full AI path not yet wired.")
+    }
+
+    private func containsAny(_ text: String, _ keywords: [String]) -> Bool {
+        keywords.contains { text.contains($0) }
     }
 }
 

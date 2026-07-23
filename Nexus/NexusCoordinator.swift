@@ -10,11 +10,13 @@ final class NexusCoordinator: ObservableObject {
     private let deviceMonitor: DeviceMetricsMonitor
     private let processor: SignalProcessor
     private let insightEngine: InsightEngine
+    private let healthCalculator: HealthScoreCalculator
     private let automationBridge: AutomationBridge
     private let logger: LoggerService
     private let eventBus: EventBus
     private var currentPersonaID: String = "quicksilver"
     private var isRunning = false
+    private var healthInput = HealthScoreCalculator.Input()
 
     init(
         networkMonitor: NetworkMonitor = NetworkMonitor(),
@@ -23,6 +25,7 @@ final class NexusCoordinator: ObservableObject {
         deviceMonitor: DeviceMetricsMonitor = DeviceMetricsMonitor(),
         processor: SignalProcessor = SignalProcessor(),
         insightEngine: InsightEngine = InsightEngine(),
+        healthCalculator: HealthScoreCalculator = HealthScoreCalculator(),
         automationBridge: AutomationBridge = AutomationBridge(),
         logger: LoggerService,
         eventBus: EventBus
@@ -33,6 +36,7 @@ final class NexusCoordinator: ObservableObject {
         self.deviceMonitor = deviceMonitor
         self.processor = processor
         self.insightEngine = insightEngine
+        self.healthCalculator = healthCalculator
         self.automationBridge = automationBridge
         self.logger = logger
         self.eventBus = eventBus
@@ -45,10 +49,18 @@ final class NexusCoordinator: ObservableObject {
         logger.info("Nexus starting", category: logger.nexus)
         automationBridge.configure()
 
-        networkMonitor.onChange = { [weak self] c, e, k in Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) } }
-        batteryMonitor.onChange = { [weak self] l, d in Task { @MainActor in self?.handleBattery(level: l, description: d) } }
-        storageMonitor.onChange = { [weak self] a, t in Task { @MainActor in self?.handleStorage(available: a, total: t) } }
-        deviceMonitor.onChange = { [weak self] t, lp in Task { @MainActor in self?.handleDevice(thermal: t, lowPower: lp) } }
+        networkMonitor.onChange = { [weak self] c, e, k in
+            Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) }
+        }
+        batteryMonitor.onChange = { [weak self] l, d in
+            Task { @MainActor in self?.handleBattery(level: l, description: d) }
+        }
+        storageMonitor.onChange = { [weak self] a, t in
+            Task { @MainActor in self?.handleStorage(available: a, total: t) }
+        }
+        deviceMonitor.onChange = { [weak self] t, lp in
+            Task { @MainActor in self?.handleDevice(thermal: t, lowPower: lp) }
+        }
 
         networkMonitor.start()
         batteryMonitor.start()
@@ -77,8 +89,10 @@ final class NexusCoordinator: ObservableObject {
         state.networkStatus = signal.value
         state.isNetworkExpensive = expensive
         state.isNetworkConstrained = constrained
-        state.networkHealthScore = connected ? (constrained || expensive ? 70 : 95) : 20
-        recalculateOverallHealth()
+        healthInput.isNetworkConnected = connected
+        healthInput.isNetworkExpensive = expensive
+        healthInput.isNetworkConstrained = constrained
+        applyHealthScores()
     }
 
     private func handleBattery(level: Double, description: String) {
@@ -86,8 +100,8 @@ final class NexusCoordinator: ObservableObject {
         ingest(signal)
         state.batteryLevel = level >= 0 ? level : nil
         state.batteryState = description
-        if level >= 0 { state.powerHealthScore = Int(level * 100) }
-        recalculateOverallHealth()
+        healthInput.batteryLevel = level >= 0 ? level : nil
+        applyHealthScores()
     }
 
     private func handleStorage(available: Double, total: Double) {
@@ -95,6 +109,9 @@ final class NexusCoordinator: ObservableObject {
         ingest(signal)
         state.availableStorageGB = available
         state.totalStorageGB = total
+        healthInput.availableStorageGB = available
+        healthInput.totalStorageGB = total
+        applyHealthScores()
     }
 
     private func handleDevice(thermal: String, lowPower: Bool) {
@@ -102,6 +119,9 @@ final class NexusCoordinator: ObservableObject {
         ingest(signal)
         state.thermalState = thermal
         state.lowPowerMode = lowPower
+        healthInput.thermalState = thermal
+        healthInput.isLowPowerMode = lowPower
+        applyHealthScores()
     }
 
     private func ingest(_ signal: Signal) {
@@ -114,8 +134,10 @@ final class NexusCoordinator: ObservableObject {
         }
     }
 
-    private func recalculateOverallHealth() {
-        let scores = [state.networkHealthScore, state.powerHealthScore]
-        state.overallHealthScore = scores.reduce(0, +) / max(scores.count, 1)
+    private func applyHealthScores() {
+        let result = healthCalculator.calculate(healthInput)
+        state.networkHealthScore = result.network
+        state.powerHealthScore = result.power
+        state.overallHealthScore = result.overall
     }
 }

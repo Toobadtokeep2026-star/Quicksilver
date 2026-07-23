@@ -1,24 +1,27 @@
 import Foundation
 
 /// Owns persona lifecycle and switching.
+/// Uses PersonaRegistry as the single source of truth.
 @MainActor
 final class PersonaManager: ObservableObject {
     @Published private(set) var state: PersonaState
 
+    private let registry: PersonaRegistry
     private let eventBus: EventBus
     private let logger: LoggerService
-    private let available: [PersonaConfiguration]
 
     init(
-        initial: PersonaConfiguration = .quicksilver,
-        available: [PersonaConfiguration] = PersonaConfiguration.all,
+        initialID: String = "quicksilver",
+        registry: PersonaRegistry = PersonaRegistry(),
         eventBus: EventBus,
         logger: LoggerService
     ) {
-        self.state = PersonaState(configuration: initial)
-        self.available = available
+        self.registry = registry
         self.eventBus = eventBus
         self.logger = logger
+
+        let initialConfig = registry.configuration(for: initialID) ?? .quicksilver
+        self.state = PersonaState(configuration: initialConfig)
     }
 
     var activeConfiguration: PersonaConfiguration {
@@ -26,13 +29,11 @@ final class PersonaManager: ObservableObject {
     }
 
     var availableConfigurations: [PersonaConfiguration] {
-        available
+        registry.all
     }
 
     func switchTo(id: String) async throws {
-        guard let config = available.first(where: { $0.id == id }) else {
-            throw AppError.personaUnavailable(id)
-        }
+        let config = try registry.require(id: id)
         guard config.id != state.id else { return }
 
         var newState = PersonaState(configuration: config)

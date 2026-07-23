@@ -1,4 +1,6 @@
 import Foundation
+import Combine
+import Core
 
 /// Owns persona lifecycle and switching.
 @MainActor

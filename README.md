@@ -4,7 +4,7 @@ Native iOS intelligence framework built around modular architecture, adaptive pe
 
 ## Day One Foundation (Complete)
 
-This branch establishes the clean native SwiftUI skeleton:
+This establishes the clean native SwiftUI skeleton:
 
 - Modular source layout (`App`, `Core`, `Personas`, `Nexus`, `UI`, `Models`, `Services`, `Resources`, `Tests`)
 - Application entry point + dependency injection container
@@ -14,21 +14,32 @@ This branch establishes the clean native SwiftUI skeleton:
 - Basic SwiftUI shell that surfaces active persona and Nexus status
 - XCTest foundation for personas, configuration, and Nexus lifecycle
 - SwiftLint configuration
-- GitHub Actions structure check
+- GitHub Actions structure check + **macOS `swift test` for core modules**
 - Updated architecture documentation
+- **Package.swift** exposing non-UI targets as `QuicksilverCore` library (Core / Memory / Personas / ServicesAI / Nexus)
 
 ### What is intentionally missing
 
 - Full `.xcodeproj` / `project.pbxproj` (generate with Xcode or xcodegen on a Mac)
 - Real Asset Catalog and color assets
 - App Intents / Shortcuts implementation
-- AI provider services
-- Persistence layer
+- Full AI provider services beyond mock
+- Persistence layer beyond UserDefaultsMemoryStore
 - Background modes and entitlements
 
 These are deferred so Day One remains a stable, reviewable skeleton.
 
-## Getting Started (Mac required for now)
+## Getting Started
+
+### Core logic & tests (no local Mac required)
+
+```bash
+swift test
+```
+
+Runs against the Package.swift targets on any machine with Swift 5.9+ (or via the macOS CI job).
+
+### Full app (Mac + Xcode required for now)
 
 1. Create a new iOS App project in Xcode (SwiftUI, iOS 17.0+).
 2. Delete the default files.
@@ -65,9 +76,11 @@ See [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md).
 Monitoring and automation hub. Currently:
 
 - `NexusCoordinator` — lifecycle owner
-- `SystemMonitor` — placeholder for ProcessInfo / MetricKit
+- `SystemMonitor` / `DeviceMetricsMonitor` — thermal / low-power
 - `NetworkMonitor` — live `NWPathMonitor`
+- `BatteryMonitor` / `StorageMonitor`
 - `AutomationManager` — App Intents / Shortcuts ready surface (throws until implemented)
+- `InsightEngine` — persona-styled insights from signals
 
 ## License
 

@@ -17,7 +17,10 @@ actor EventBus {
         case aiRequestStarted(requestID: String)
         case aiRequestCompleted(requestID: String)
 
-        // Autonomy signals (published by Nexus or system bridges)
+        // Unified monitoring pipeline
+        case signalReceived(source: String, value: String, numericValue: Double?)
+
+        // Autonomy signals (published by pipeline or system bridges)
         case focusDidChange(focusName: String?)
         case timeContextDidChange(period: TimePeriod)
         case batteryPressureChanged(level: Double, isLowPower: Bool)

@@ -56,6 +56,11 @@ final class NexusCoordinator: ObservableObject {
         batteryMonitor.start()
         storageMonitor.start()
         deviceMonitor.start()
+
+        // Seed initial time context so PersonaManager has a starting point
+        Task {
+            await publishCurrentTimeContext()
+        }
     }
 
     func stop() {
@@ -73,6 +78,8 @@ final class NexusCoordinator: ObservableObject {
         currentPersonaID = personaID
     }
 
+    // MARK: - Signal handlers (also publish autonomy events)
+
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {
         let signal = processor.networkSignal(isConnected: connected, isExpensive: expensive, isConstrained: constrained)
         ingest(signal)
@@ -81,6 +88,10 @@ final class NexusCoordinator: ObservableObject {
         state.isNetworkConstrained = constrained
         state.networkHealthScore = connected ? (constrained || expensive ? 70 : 95) : 20
         recalculateOverallHealth()
+
+        Task {
+            await eventBus.publish(.networkConditionChanged(isConnected: connected, isConstrained: constrained))
+        }
     }
 
     private func handleBattery(level: Double, description: String) {
@@ -90,6 +101,11 @@ final class NexusCoordinator: ObservableObject {
         state.batteryState = description
         if level >= 0 { state.powerHealthScore = Int(level * 100) }
         recalculateOverallHealth()
+
+        let isLowPower = description.lowercased().contains("low") || level < 0.20
+        Task {
+            await eventBus.publish(.batteryPressureChanged(level: level, isLowPower: isLowPower))
+        }
     }
 
     private func handleStorage(available: Double, total: Double) {
@@ -104,7 +120,16 @@ final class NexusCoordinator: ObservableObject {
         ingest(signal)
         state.thermalState = thermal
         state.lowPowerMode = lowPower
+
+        Task {
+            await eventBus.publish(.thermalPressureChanged(state: thermal))
+            if lowPower {
+                await eventBus.publish(.batteryPressureChanged(level: state.batteryLevel ?? 0.15, isLowPower: true))
+            }
+        }
     }
+
+    // MARK: - Helpers
 
     private func ingest(_ signal: Signal) {
         state.appendSignal(signal)
@@ -119,5 +144,18 @@ final class NexusCoordinator: ObservableObject {
     private func recalculateOverallHealth() {
         let scores = [state.networkHealthScore, state.powerHealthScore]
         state.overallHealthScore = scores.reduce(0, +) / max(scores.count, 1)
+    }
+
+    private func publishCurrentTimeContext() async {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let period: EventBus.TimePeriod
+        switch hour {
+        case 5..<8:   period = .earlyMorning
+        case 8..<12:  period = .morning
+        case 12..<17: period = .afternoon
+        case 17..<21: period = .evening
+        default:      period = .night
+        }
+        await eventBus.publish(.timeContextDidChange(period: period))
     }
 }

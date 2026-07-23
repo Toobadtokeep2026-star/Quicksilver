@@ -3,7 +3,7 @@ import Combine
 import Core
 
 /// Owns persona lifecycle and switching.
-/// Supports both explicit (override) and autonomous switching.
+/// Supports both explicit (override) and autonomous switching driven by context.
 @MainActor
 final class PersonaManager: ObservableObject {
     @Published private(set) var state: PersonaState
@@ -13,12 +13,18 @@ final class PersonaManager: ObservableObject {
     private let available: [PersonaConfiguration]
     private let policy: PersonaDecisionPolicy
 
-    // Latest observed context used by the decision policy
+    // Latest observed context fragments
     private var latestFocusName: String?
     private var latestTimePeriod: EventBus.TimePeriod?
     private var latestBatteryLevel: Double?
     private var latestIsLowPower: Bool = false
     private var latestThermalState: String?
+
+    // Richer task/intent context (set by callers or future AI layer)
+    private var latestTaskDescription: String?
+    private var latestTaskKind: TaskKind?
+    private var latestQueryIntent: QueryIntent?
+    private var latestMemoryHints: [String] = []
 
     private var subscriptionID: UUID?
 
@@ -35,7 +41,6 @@ final class PersonaManager: ObservableObject {
         self.logger = logger
         self.policy = policy
 
-        // Subscribe to autonomy signals
         Task { @MainActor in
             let id = await eventBus.subscribe { [weak self] event in
                 Task { @MainActor in
@@ -80,6 +85,21 @@ final class PersonaManager: ObservableObject {
         state.recordInteraction()
     }
 
+    /// Inject richer task / intent context so the policy can decide based on
+    /// what is actually needed rather than only ambient signals.
+    func updateTaskContext(
+        description: String? = nil,
+        kind: TaskKind? = nil,
+        queryIntent: QueryIntent? = nil,
+        memoryHints: [String]? = nil
+    ) {
+        if let description { latestTaskDescription = description }
+        if let kind { latestTaskKind = kind }
+        if let queryIntent { latestQueryIntent = queryIntent }
+        if let memoryHints { latestMemoryHints = memoryHints }
+        evaluateAutonomy(reason: "task context updated")
+    }
+
     // MARK: - Autonomy
 
     private func handle(event: EventBus.Event) {
@@ -97,8 +117,8 @@ final class PersonaManager: ObservableObject {
             latestIsLowPower = isLowPower
             evaluateAutonomy(reason: "battery pressure")
 
-        case .thermalPressureChanged(let state):
-            latestThermalState = state
+        case .thermalPressureChanged(let thermal):
+            latestThermalState = thermal
             evaluateAutonomy(reason: "thermal pressure")
 
         default:
@@ -107,14 +127,23 @@ final class PersonaManager: ObservableObject {
     }
 
     private func evaluateAutonomy(reason: String) {
-        guard let preferred = policy.preferredPersona(
-            current: state.configuration,
-            lastSwitchedAt: state.lastSwitchedAt,
+        let context = PersonaContext(
+            taskDescription: latestTaskDescription,
+            taskKind: latestTaskKind,
+            queryIntent: latestQueryIntent,
+            recentMemoryHints: latestMemoryHints,
+            sessionDuration: nil,
             focusName: latestFocusName,
             timePeriod: latestTimePeriod,
             batteryLevel: latestBatteryLevel,
             isLowPower: latestIsLowPower,
             thermalState: latestThermalState
+        )
+
+        guard let preferred = policy.preferredPersona(
+            current: state.configuration,
+            lastSwitchedAt: state.lastSwitchedAt,
+            context: context
         ) else {
             return
         }

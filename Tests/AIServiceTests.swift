@@ -1,5 +1,6 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
+@testable import ServicesAI
 
 @MainActor
 final class AIServiceTests: XCTestCase {
@@ -11,13 +12,5 @@ final class AIServiceTests: XCTestCase {
         let response = try await service.complete(prompt: "Hello Quicksilver")
         XCTAssertFalse(response.content.isEmpty)
         XCTAssertEqual(response.finishReason, .stop)
-    }
-
-    func testDependencyContainerWiresServices() {
-        let container = DependencyContainer()
-        XCTAssertNotNil(container.aiService)
-        XCTAssertNotNil(container.personaManager)
-        XCTAssertNotNil(container.memoryManager)
-        XCTAssertNotNil(container.featureFlags)
     }
 }

@@ -13,6 +13,7 @@ final class NexusCoordinator: ObservableObject {
     private let processor: SignalProcessor
     private let insightEngine: InsightEngine
     private let automationBridge: AutomationBridge
+    private let pipeline: SignalPipeline
     private let logger: LoggerService
     private let eventBus: EventBus
     private var currentPersonaID: String = "quicksilver"
@@ -38,6 +39,7 @@ final class NexusCoordinator: ObservableObject {
         self.automationBridge = automationBridge
         self.logger = logger
         self.eventBus = eventBus
+        self.pipeline = SignalPipeline(eventBus: eventBus, logger: logger)
     }
 
     func start() {
@@ -57,7 +59,6 @@ final class NexusCoordinator: ObservableObject {
         storageMonitor.start()
         deviceMonitor.start()
 
-        // Seed initial time context so PersonaManager has a starting point
         Task {
             await publishCurrentTimeContext()
         }
@@ -78,63 +79,81 @@ final class NexusCoordinator: ObservableObject {
         currentPersonaID = personaID
     }
 
-    // MARK: - Signal handlers (also publish autonomy events)
+    // MARK: - Monitor handlers → pipeline
 
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {
         let signal = processor.networkSignal(isConnected: connected, isExpensive: expensive, isConstrained: constrained)
-        ingest(signal)
-        state.networkStatus = signal.value
-        state.isNetworkExpensive = expensive
-        state.isNetworkConstrained = constrained
-        state.networkHealthScore = connected ? (constrained || expensive ? 70 : 95) : 20
-        recalculateOverallHealth()
-
-        Task {
-            await eventBus.publish(.networkConditionChanged(isConnected: connected, isConstrained: constrained))
-        }
+        pipeline.ingest(signal)
+        updateLocalState(from: signal, expensive: expensive, constrained: constrained)
     }
 
     private func handleBattery(level: Double, description: String) {
         let signal = processor.batterySignal(level: level, stateDescription: description)
-        ingest(signal)
-        state.batteryLevel = level >= 0 ? level : nil
-        state.batteryState = description
-        if level >= 0 { state.powerHealthScore = Int(level * 100) }
-        recalculateOverallHealth()
-
-        let isLowPower = description.lowercased().contains("low") || level < 0.20
-        Task {
-            await eventBus.publish(.batteryPressureChanged(level: level, isLowPower: isLowPower))
-        }
+        pipeline.ingest(signal)
+        updateLocalState(from: signal)
     }
 
     private func handleStorage(available: Double, total: Double) {
         let signal = processor.storageSignal(availableGB: available, totalGB: total)
-        ingest(signal)
+        pipeline.ingest(signal)
         state.availableStorageGB = available
         state.totalStorageGB = total
     }
 
     private func handleDevice(thermal: String, lowPower: Bool) {
-        let signal = processor.deviceSignal(thermal: thermal, lowPower: lowPower)
-        ingest(signal)
+        var signal = processor.deviceSignal(thermal: thermal, lowPower: lowPower)
+        // Ensure metadata carries low-power for the pipeline mapping
+        if lowPower {
+            signal = Signal(
+                id: signal.id,
+                source: signal.source,
+                category: signal.category,
+                timestamp: signal.timestamp,
+                value: signal.value,
+                numericValue: signal.numericValue,
+                confidence: signal.confidence,
+                metadata: signal.metadata.merging(["lowPower": "true"]) { _, new in new }
+            )
+        }
+        pipeline.ingest(signal)
         state.thermalState = thermal
         state.lowPowerMode = lowPower
-
-        Task {
-            await eventBus.publish(.thermalPressureChanged(state: thermal))
-            if lowPower {
-                await eventBus.publish(.batteryPressureChanged(level: state.batteryLevel ?? 0.15, isLowPower: true))
-            }
-        }
     }
 
-    // MARK: - Helpers
+    // MARK: - Local state + insights
 
-    private func ingest(_ signal: Signal) {
+    private func updateLocalState(from signal: Signal, expensive: Bool = false, constrained: Bool = false) {
         state.appendSignal(signal)
-        let event = DiagnosticEvent(signalID: signal.id, title: "\(signal.source.rawValue.capitalized) update", detail: signal.value, severity: .info, source: signal.source)
+
+        switch signal.source {
+        case .network:
+            state.networkStatus = signal.value
+            state.isNetworkExpensive = expensive
+            state.isNetworkConstrained = constrained
+            state.networkHealthScore = signal.value != "disconnected"
+                ? (constrained || expensive ? 70 : 95)
+                : 20
+        case .battery:
+            if let level = signal.numericValue, level >= 0 {
+                state.batteryLevel = level
+                state.powerHealthScore = Int(level * 100)
+            }
+            state.batteryState = signal.value
+        default:
+            break
+        }
+
+        recalculateOverallHealth()
+
+        let event = DiagnosticEvent(
+            signalID: signal.id,
+            title: "\(signal.source.rawValue.capitalized) update",
+            detail: signal.value,
+            severity: .info,
+            source: signal.source
+        )
         state.appendEvent(event)
+
         if let insight = insightEngine.insight(for: signal, recent: state.recentSignals, personaID: currentPersonaID) {
             state.appendInsight(insight)
             logger.info("Insight: \(insight.title)", category: logger.nexus)

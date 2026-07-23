@@ -1,5 +1,6 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
+@testable import Memory
 
 @MainActor
 final class MemoryManagerTests: XCTestCase {

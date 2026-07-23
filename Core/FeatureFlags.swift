@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Central feature flag surface.
 /// Day Two: in-memory + simple UserDefaults persistence.

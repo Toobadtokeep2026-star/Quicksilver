@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import QuicksilverIntents
 
 @MainActor
 final class DependencyContainer: ObservableObject {
@@ -29,8 +30,19 @@ final class DependencyContainer: ObservableObject {
 
         self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
 
+        // Make the autonomous core + AI reachable by App Intents / Shortcuts / Siri
+        IntentDependencies.shared.configure(
+            personaManager: personaManager,
+            nexusCoordinator: nexus,
+            memoryManager: memoryManager,
+            aiService: aiService,
+            eventBus: eventBus,
+            logger: logger
+        )
+
         Task {
             self.nexus.updatePersonaContext(self.personaManager.activeConfiguration.id)
+            self.nexus.start()
         }
     }
 

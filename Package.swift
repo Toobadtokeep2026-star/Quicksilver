@@ -45,7 +45,7 @@ let package = Package(
         ),
         .target(
             name: "QuicksilverIntents",
-            dependencies: ["Core", "Personas", "Nexus", "Memory"],
+            dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
         .testTarget(

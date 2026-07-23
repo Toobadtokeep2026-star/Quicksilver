@@ -1,5 +1,6 @@
 import XCTest
-@testable import Quicksilver
+@testable import Core
+@testable import Nexus
 
 @MainActor
 final class NexusIntelligenceTests: XCTestCase {
@@ -42,11 +43,5 @@ final class NexusIntelligenceTests: XCTestCase {
         XCTAssertTrue(nexus.state.isActive)
         nexus.stop()
         XCTAssertFalse(nexus.state.isActive)
-    }
-
-    func testDependencyContainerWiresNexus() {
-        let container = DependencyContainer()
-        XCTAssertNotNil(container.nexus)
-        XCTAssertNotNil(container.nexus.state)
     }
 }

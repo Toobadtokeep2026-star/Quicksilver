@@ -1,4 +1,5 @@
 import Foundation
+import Core
 
 /// Future home for Shortcuts, App Intents, and background automation.
 /// Day One: empty surface with clear extension points.

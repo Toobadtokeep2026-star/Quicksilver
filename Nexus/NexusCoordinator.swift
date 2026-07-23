@@ -19,6 +19,9 @@ final class NexusCoordinator: ObservableObject {
     private var currentPersonaID: String = "quicksilver"
     private var isRunning = false
 
+    /// Convenience for UI binding
+    var isActive: Bool { state.isActive }
+
     init(
         networkMonitor: NetworkMonitor = NetworkMonitor(),
         batteryMonitor: BatteryMonitor = BatteryMonitor(),
@@ -102,7 +105,6 @@ final class NexusCoordinator: ObservableObject {
 
     private func handleDevice(thermal: String, lowPower: Bool) {
         var signal = processor.deviceSignal(thermal: thermal, lowPower: lowPower)
-        // Ensure metadata carries low-power for the pipeline mapping
         if lowPower {
             signal = Signal(
                 id: signal.id,

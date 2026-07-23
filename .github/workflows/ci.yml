@@ -1,0 +1,44 @@
+name: Quicksilver CI
+
+on:
+  push:
+    branches: [ main, day-one-foundation ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify modular structure
+        run: |
+          echo "Checking required Day One directories..."
+          test -d App || (echo "Missing App/" && exit 1)
+          test -d Core || (echo "Missing Core/" && exit 1)
+          test -d Personas || (echo "Missing Personas/" && exit 1)
+          test -d Nexus || (echo "Missing Nexus/" && exit 1)
+          test -d UI || (echo "Missing UI/" && exit 1)
+          test -d Tests || (echo "Missing Tests/" && exit 1)
+          echo "Structure OK"
+
+      - name: Check for required source files
+        run: |
+          test -f App/QuicksilverApp.swift
+          test -f App/DependencyContainer.swift
+          test -f Core/AppConfiguration.swift
+          test -f Core/AppError.swift
+          test -f Personas/PersonaProtocol.swift
+          test -f Personas/QuicksilverPersona.swift
+          test -f Nexus/NexusCoordinator.swift
+          test -f UI/ContentView.swift
+          echo "Core files present"
+
+  # Full Xcode build/test requires macOS runner + generated .xcodeproj.
+  # Day One: structure validation only.
+  # Day Two+: add xcodebuild once project.pbxproj exists (or switch to xcodegen).
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "iOS build job deferred until Xcode project is generated. See Documentation/ARCHITECTURE.md"

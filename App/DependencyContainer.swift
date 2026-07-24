@@ -25,15 +25,21 @@ final class DependencyContainer {
 
         self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
 
-        let memoryStore = UserDefaultsMemoryStore()
+        // Prefer SwiftData; fall back to UserDefaults if container creation fails.
+        let memoryStore: MemoryStore
+        if let swiftDataStore = try? SwiftDataMemoryStore() {
+            memoryStore = swiftDataStore
+            logger.info("Memory backend: SwiftData", category: logger.memory)
+        } else {
+            memoryStore = UserDefaultsMemoryStore()
+            logger.info("Memory backend: UserDefaults (SwiftData unavailable)", category: logger.memory)
+        }
         self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
 
         self.aiService = AIService(eventBus: eventBus, logger: logger, featureFlags: featureFlags)
 
         self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
 
-        // Make the autonomous core + AI reachable by App Intents / Shortcuts / Siri.
-        // (Singleton remains for now — tracked as next P1 issue.)
         IntentDependencies.shared.configure(
             personaManager: personaManager,
             nexusCoordinator: nexus,
@@ -43,13 +49,10 @@ final class DependencyContainer {
             logger: logger
         )
 
-        // Start Nexus on the main actor after all dependencies are wired.
-        // No unstructured Task — deterministic lifecycle, easy to stop later.
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
         nexus.start()
     }
 
-    /// Current active configuration — single source of truth.
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
     }

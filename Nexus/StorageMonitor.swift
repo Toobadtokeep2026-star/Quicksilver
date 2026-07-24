@@ -1,7 +1,6 @@
 import Foundation
 
-/// Polls free / total storage on a low-frequency timer (battery-friendly).
-final class StorageMonitor: @unchecked Sendable {
+final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
     private var isRunning = false
     private var timer: Timer?
     private(set) var availableGB: Double = 0
@@ -26,9 +25,7 @@ final class StorageMonitor: @unchecked Sendable {
         timer = nil
     }
 
-    deinit {
-        stop()
-    }
+    deinit { stop() }
 
     private func sample() {
         do {
@@ -39,8 +36,6 @@ final class StorageMonitor: @unchecked Sendable {
                 totalGB = total.doubleValue / 1_073_741_824
                 onChange?(availableGB, totalGB)
             }
-        } catch {
-            // Intentionally quiet — storage sampling is best-effort
-        }
+        } catch { }
     }
 }

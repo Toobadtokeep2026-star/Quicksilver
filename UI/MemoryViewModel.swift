@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+import Core
+import Memory
+import Personas
 
 @MainActor
 @Observable
@@ -28,7 +31,6 @@ final class MemoryViewModel {
             personaScope: policy.prefersScopedView ? personaID : nil,
             minimumImportance: policy.retentionThreshold
         )
-        // Apply decay at query time so the UI always reflects current importance
         items = container.memoryManager.items(matching: query, policy: policy)
             .map { item in
                 var copy = item

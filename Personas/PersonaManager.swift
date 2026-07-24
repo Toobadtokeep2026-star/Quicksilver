@@ -6,8 +6,8 @@ import Core
 /// Conforms to Core.PersonaEngine so other modules depend only on the contract.
 @MainActor
 @Observable
-final class PersonaManager: PersonaEngine {
-    private(set) var state: PersonaState
+public final class PersonaManager: PersonaEngine {
+    public private(set) var state: PersonaState
 
     private let eventBus: EventBus
     private let logger: LoggerService
@@ -27,7 +27,7 @@ final class PersonaManager: PersonaEngine {
 
     private var subscriptionID: UUID?
 
-    init(
+    public init(
         initial: PersonaConfiguration = .quicksilver,
         available: [PersonaConfiguration] = PersonaConfiguration.all,
         eventBus: EventBus,
@@ -56,41 +56,38 @@ final class PersonaManager: PersonaEngine {
         }
     }
 
-    // MARK: - PersonaEngine
-
-    var activePersonaID: String {
+    public var activePersonaID: String {
         state.configuration.id
     }
 
-    var activeConfiguration: PersonaConfiguration {
+    public var activeConfiguration: PersonaConfiguration {
         state.configuration
     }
 
-    var availableConfigurations: [PersonaConfiguration] {
+    public var availableConfigurations: [PersonaConfiguration] {
         available
     }
 
-    /// Memory policy for the currently active persona.
-    var activeMemoryPolicy: MemoryPolicy {
+    public var activeMemoryPolicy: MemoryPolicy {
         MemoryPolicy.policy(for: activePersonaID)
     }
 
-    func switchTo(id: String) async throws {
+    public func switchTo(id: String) async throws {
         guard let config = available.first(where: { $0.id == id }) else {
             throw AppError.personaUnavailable(id)
         }
         try await performSwitch(to: config, reason: "explicit override")
     }
 
-    func switchTo(_ config: PersonaConfiguration) async throws {
+    public func switchTo(_ config: PersonaConfiguration) async throws {
         try await switchTo(id: config.id)
     }
 
-    func recordInteraction() {
+    public func recordInteraction() {
         state.recordInteraction()
     }
 
-    func updateTaskContext(
+    public func updateTaskContext(
         description: String? = nil,
         kind: TaskKind? = nil,
         queryIntent: QueryIntent? = nil,
@@ -102,8 +99,6 @@ final class PersonaManager: PersonaEngine {
         if let memoryHints { latestMemoryHints = memoryHints }
         evaluateAutonomy(reason: "task context updated")
     }
-
-    // MARK: - Autonomy
 
     private func handle(event: EventBus.Event) {
         switch event {

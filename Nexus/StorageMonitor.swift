@@ -1,7 +1,7 @@
 import Foundation
 
 /// Polls free / total storage on a low-frequency timer (battery-friendly).
-final class StorageMonitor: @unchecked Sendable {
+final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
     private var isRunning = false
     private var timer: Timer?
     private(set) var availableGB: Double = 0

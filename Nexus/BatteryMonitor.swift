@@ -4,7 +4,7 @@ import UIKit
 #endif
 
 /// Observes battery level and state via UIDevice notifications.
-final class BatteryMonitor: @unchecked Sendable {
+final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
     private var isRunning = false
     private(set) var level: Double = -1
     private(set) var stateDescription: String = "unknown"

@@ -2,7 +2,7 @@ import Foundation
 
 /// Observes thermal state and Low Power Mode via ProcessInfo notifications.
 /// Correctly stores and removes block-based observer tokens.
-final class DeviceMetricsMonitor: @unchecked Sendable {
+final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
     private var isRunning = false
     private var thermalToken: NSObjectProtocol?
     private var powerToken: NSObjectProtocol?

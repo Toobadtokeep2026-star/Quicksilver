@@ -2,7 +2,7 @@ import Foundation
 import Network
 
 /// Observes network path changes via NWPathMonitor.
-final class NetworkMonitor: @unchecked Sendable {
+final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network")
     private var isRunning = false

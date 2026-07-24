@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    TARGETED_DEVICE_FAMILY: "1" # iPhone only for Day One
+    TARGETED_DEVICE_FAMILY: "1"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
@@ -27,8 +27,10 @@ targets:
       - path: Nexus
       - path: Services/AI
       - path: Intents
-      - path: Models
       - path: Resources
+        optional: true
+      - path: Models
+        optional: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
@@ -38,6 +40,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: targeted
     dependencies: []
 
   QuicksilverTests:

@@ -1,47 +1,36 @@
 # Quicksilver
 
-Native iOS intelligence framework built around modular architecture, adaptive personas, diagnostics (Nexus), and automation.
+Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
-## Day One Foundation (Complete)
+```
+SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
+```
 
-This establishes the clean native SwiftUI skeleton:
+## Current surfaces
 
-- Modular source layout (`App`, `Core`, `Personas`, `Nexus`, `UI`, `Models`, `Services`, `Resources`, `Tests`)
-- Application entry point + dependency injection container
-- Configuration system + typed errors + OSLog facade
-- Persona **configuration** surface (data-driven) + three initial personas (Forge, Quicksilver, Eternal)
-- Nexus coordinator with SystemMonitor, NetworkMonitor (Network.framework), AutomationManager placeholders
-- Basic SwiftUI shell that surfaces active persona and Nexus status
-- Real Grok / xAI AIProvider (Keychain-backed, feature-flagged, Mock by default)
-- XCTest foundation for personas, configuration, and Nexus lifecycle
-- SwiftLint configuration (advisory in CI)
-- GitHub Actions structure check + **macOS `swift test` for core modules**
-- Updated architecture documentation
-- **Package.swift** exposing non-UI targets as `QuicksilverCore` library (Core / Memory / Personas / ServicesAI / Nexus)
-- **project.yml** for one-command Xcode project generation via xcodegen
+| Screen | Role |
+|--------|------|
+| **Home** | Persona switcher, Nexus health summary |
+| **Ask** | Persona-aware chat with Memory-backed history |
+| **Memory** | Policy-filtered notes + importance |
+| **Diagnostics** | Insights + recent signals |
+| **Settings** | xAI API key (Keychain) + AI feature flag |
 
-### What is intentionally missing / deferred
+## Architecture
 
-- Full generated `.xcodeproj` (run `xcodegen` on a Mac — see below)
-- Real Asset Catalog and color assets
-- Persistence layer beyond UserDefaultsMemoryStore
-- Background modes and entitlements
+Strict dependency direction is documented in [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md).
 
-These remain deferred so the foundation stays stable and reviewable.
+Core owns contracts (`AIProvider`, `MemoryStore`, `DiagnosticProvider`, `PersonaEngine`, `AutomationProvider`). Modules implement; UI only presents.
 
-## Getting Started
+## Getting started
 
-### Core logic & tests (no local Mac required)
+### Package tests (any Swift 5.9+ host)
 
 ```bash
 swift test
 ```
 
-Runs against the Package.swift targets on any machine with Swift 5.9+ (or via the macOS CI job).
-
-### Full app (Mac + Xcode)
-
-**Preferred (xcodegen):**
+### Full iOS app (Mac + Xcode)
 
 ```bash
 brew install xcodegen
@@ -49,56 +38,42 @@ xcodegen generate
 open Quicksilver.xcodeproj
 ```
 
-**Manual fallback:**
+Select your Team for Automatic signing, then run on **iPhone 14** (or Simulator).
 
-1. Create a new iOS App project in Xcode (SwiftUI, iOS 17.0+).
-2. Delete the default files.
-3. Drag the folders (`App`, `Core`, `Personas`, `Nexus`, `UI`, etc.) into the project, ensuring "Create groups" and correct target membership.
-4. Set the `@main` entry to `QuicksilverApp`.
-5. Add the test files to a Unit Testing Bundle target.
-6. Build & run on iPhone 14 simulator or device.
+### Enable real Grok
 
-## Enabling the real AI provider
+1. Run the app on device/simulator
+2. Open **Settings**
+3. Paste your xAI API key → **Save Key** (stored in Keychain only)
+4. Enable **AI Service**
+5. Use **Ask** — provider shows as Grok when flag + key are present
 
-```swift
-// Once you have a key from the xAI console
-container.aiService.configureAPIKey("xai-...")
-container.featureFlags.set("aiServiceEnabled", enabled: true)
-```
-
-Default remains Mock + flag off — zero network, zero risk.
-
-## Development Principles
-
-- Privacy first
-- Modular design with clear boundaries
-- Test-driven changes
-- Clean Git history
-- Minimal dependencies
-- Production-quality Swift (concurrency safety, Sendable where appropriate)
-
-## Architecture Overview
-
-See [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md).
+Default remains Mock + flag off (no network).
 
 ## Personas
 
-| Persona     | Role                                      |
-|-------------|-------------------------------------------|
-| Quicksilver | Primary adaptive intelligence             |
-| Forge       | Disciplined builder & structural focus    |
-| Eternal     | Continuity, memory, long-term coherence   |
+| Persona | Role |
+|---------|------|
+| Quicksilver | Adaptive daily intelligence |
+| Forge | Disciplined builder / engineering |
+| Eternal | Continuity and long-term coherence |
 
-## Nexus
+Each has a `MemoryPolicy` (retention threshold, scoped view, write importance hint).
 
-Monitoring and automation hub. Currently:
+## Memory backends
 
-- `NexusCoordinator` — lifecycle owner
-- `SystemMonitor` / `DeviceMetricsMonitor` — thermal / low-power
-- `NetworkMonitor` — live `NWPathMonitor`
-- `BatteryMonitor` / `StorageMonitor`
-- `AutomationManager` — App Intents / Shortcuts ready surface
-- `InsightEngine` — persona-styled insights from signals
+- **SwiftData** preferred at launch
+- **UserDefaults** automatic fallback
+- **InMemory** for unit tests
+
+All behind `MemoryStore`.
+
+## Development principles
+
+- Privacy first, on-device by default
+- Modular boundaries non-negotiable
+- Focused commits, working vertical slices
+- No autonomous agent loops, no cloud dependency for core function
 
 ## License
 

@@ -12,6 +12,8 @@ final class AIService {
     private let eventBus: EventBus
     private let logger: LoggerService
     private let featureFlags: FeatureFlags
+    private let promptBuilder = PromptBuilder()
+    private let contextAssembler = ContextAssembler()
 
     static let apiKeyKeychainAccount = "xai.apiKey"
 
@@ -59,7 +61,41 @@ final class AIService {
     var currentProviderID: String { provider.id }
     var currentProviderName: String { provider.displayName }
 
+    // MARK: - Preferred entry point
+
+    /// Persona-aware completion. Views pass user text + optional context fragments only.
+    func complete(
+        userMessage: String,
+        personaSystemPrompt: String,
+        preferredTemperature: Double = 0.7,
+        maxTokensHint: Int = 1024,
+        context: ContextAssembler.Input = .init()
+    ) async throws -> AIResponse {
+        let assembled = contextAssembler.assemble(context)
+        let built = promptBuilder.build(
+            personaSystemPrompt: personaSystemPrompt,
+            preferredTemperature: preferredTemperature,
+            maxTokensHint: maxTokensHint,
+            userMessage: userMessage,
+            assembledContext: assembled
+        )
+        return try await execute(
+            prompt: built.userPrompt,
+            systemPrompt: built.systemPrompt,
+            temperature: built.temperature,
+            maxTokens: built.maxTokens
+        )
+    }
+
+    // MARK: - Legacy / low-level
+
     func complete(prompt: String, systemPrompt: String? = nil, temperature: Double = 0.7, maxTokens: Int = 1024) async throws -> AIResponse {
+        try await execute(prompt: prompt, systemPrompt: systemPrompt, temperature: temperature, maxTokens: maxTokens)
+    }
+
+    // MARK: - Internal
+
+    private func execute(prompt: String, systemPrompt: String?, temperature: Double, maxTokens: Int) async throws -> AIResponse {
         guard featureFlags.isEnabled("aiServiceEnabled") || provider.id == "mock" else {
             throw AppError.unsupportedFeature("AI service is currently disabled by feature flag")
         }
@@ -71,11 +107,17 @@ final class AIService {
         defer { isProcessing = false }
 
         do {
-            let response = try await provider.complete(request)
-            lastResponse = response
-            await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
-            logger.info("AI request completed: \(response.id)", category: logger.ai)
-            return response
+            let raw = try await provider.complete(request)
+            switch ResponseValidator.validate(raw) {
+            case .accept(let response):
+                lastResponse = response
+                await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
+                logger.info("AI request completed: \(response.id)", category: logger.ai)
+                return response
+            case .reject(let reason):
+                logger.error("AI response rejected: \(reason)", category: logger.ai)
+                throw AppError.aiRequestFailed(reason)
+            }
         } catch {
             logger.error("AI request failed: \(error.localizedDescription)", category: logger.ai)
             throw error

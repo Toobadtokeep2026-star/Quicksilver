@@ -33,6 +33,11 @@ struct ContentView: View {
                     } label: {
                         Label("Memory", systemImage: "brain.head.profile")
                     }
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
                 }
             }
         }

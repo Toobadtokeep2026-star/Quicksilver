@@ -31,7 +31,7 @@ final class MemoryViewModel {
             personaScope: policy.prefersScopedView ? personaID : nil,
             minimumImportance: policy.retentionThreshold
         )
-        items = container.memoryManager.items(matching: query, policy: policy)
+        items = container.memoryManager.items(matching: query, retentionThreshold: policy.retentionThreshold)
             .map { item in
                 var copy = item
                 copy.importance = MemoryScorer.decayedImportance(for: item)

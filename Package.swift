@@ -55,7 +55,8 @@ let package = Package(
                 "Memory",
                 "Personas",
                 "ServicesAI",
-                "Nexus"
+                "Nexus",
+                "QuicksilverIntents"
             ],
             path: "Tests",
             exclude: []

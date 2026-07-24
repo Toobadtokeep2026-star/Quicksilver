@@ -13,7 +13,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "Core", path: "Core"),
-        .target(name: "Memory", dependencies: ["Core"], path: "Memory"),
+        .target(
+            name: "Memory",
+            dependencies: ["Core"],
+            path: "Memory"
+        ),
         .target(name: "Personas", dependencies: ["Core"], path: "Personas"),
         .target(name: "ServicesAI", dependencies: ["Core"], path: "Services/AI"),
         .target(name: "Nexus", dependencies: ["Core"], path: "Nexus"),

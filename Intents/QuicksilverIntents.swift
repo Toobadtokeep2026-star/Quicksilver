@@ -51,7 +51,7 @@ public struct ForcePersonaIntent: AppIntent {
     }
 }
 
-// MARK: - Capture Memory
+// MARK: - Capture Memory (now actually persists)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct CaptureMemoryIntent: AppIntent {
@@ -69,19 +69,34 @@ public struct CaptureMemoryIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
+        guard let manager = IntentDependencies.shared.personaManager,
+              let memory = IntentDependencies.shared.memoryManager else {
             throw AppError.nexusNotReady
         }
 
+        let truncated = String(content.prefix(500))
+        let personaID = manager.activeConfiguration.id
+        let policy = manager.activeMemoryPolicy
+
+        // Update task context so autonomous policy can react if needed
         manager.updateTaskContext(
-            description: "Capture memory: \(String(content.prefix(80)))",
+            description: "Capture memory: \(String(truncated.prefix(80)))",
             kind: .reflecting,
             queryIntent: .reflective,
-            memoryHints: [String(content.prefix(120))]
+            memoryHints: [String(truncated.prefix(120))]
         )
 
-        let truncated = String(content.prefix(500))
-        IntentDependencies.shared.logger?.info("Memory capture: \(truncated)", category: IntentDependencies.shared.logger?.memory)
+        // Persist for real
+        await memory.set(
+            key: "note.intent.\(UUID().uuidString.prefix(8))",
+            value: truncated,
+            category: .temporary,
+            metadata: ["source": "appintent", "persona": personaID],
+            importanceBoost: policy.writeImportanceHint,
+            personaScope: personaID
+        )
+
+        IntentDependencies.shared.logger?.info("Memory capture persisted: \(truncated.prefix(60))", category: IntentDependencies.shared.logger?.memory)
         return .result(value: "Captured: \(truncated)")
     }
 }
@@ -90,7 +105,7 @@ public struct CaptureMemoryIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetContextIntent: AppIntent {
-    public static var title: LocalizedStringResource = "What’s the Context"
+    public static var title: LocalizedStringResource = "What\'s the Context"
     public static var description = IntentDescription("Returns a short summary of current Quicksilver state (persona + health signals).")
     public static var openAppWhenRun: Bool = false
 
@@ -105,11 +120,12 @@ public struct GetContextIntent: AppIntent {
         let persona = manager.activeConfiguration.displayName
         let health = nexus.state.overallHealthScore
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        return .result(value: "Persona: \(persona) | Health: \(health) | Battery: \(battery)")
+        let network = nexus.state.networkStatus
+        return .result(value: "Persona: \(persona) | Health: \(health) | Battery: \(battery) | Network: \(network)")
     }
 }
 
-// MARK: - Query Nexus (now wired to AIService)
+// MARK: - Query Nexus (wired to AIService)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {

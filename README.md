@@ -52,14 +52,19 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
-## On-device (iPhone 14 / iOS 27 beta)
+## On-device (iPhone 14 / iOS 27 beta) — SideStore path
 
-1. Produce IPA via *Archive IPA* workflow (or local archive).
-2. Install with SideStore / TrollStore.
-3. Settings → paste xAI key → enable AI Service.
-4. Validate Home → Diagnostics → Memory → Ask → persona switch → background.
+Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
 
-No private APIs. Public Apple frameworks only.
+1. Trigger **Actions → Archive IPA → Run workflow** (Release).
+2. Download the IPA artifact from the finished run.
+3. Install the IPA in SideStore (LocalDevVPN connected).
+4. Settings → paste xAI key → enable AI Service.
+5. Validate Home → Diagnostics → Memory → Ask → persona switch.
+
+Requires repository secrets for a signed IPA. Without them the job still compiles for device and uploads diagnostics.
+
+No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
 ## Personas
 

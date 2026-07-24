@@ -1,9 +1,12 @@
 import Foundation
+import Core
 #if canImport(UIKit)
 import UIKit
 #endif
 
 final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
+    var diagnosticID: String { "battery" }
+
     private var isRunning = false
     private(set) var level: Double = -1
     private(set) var stateDescription: String = "unknown"

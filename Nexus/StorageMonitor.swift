@@ -1,6 +1,9 @@
 import Foundation
+import Core
 
 final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
+    var diagnosticID: String { "storage" }
+
     private var isRunning = false
     private var timer: Timer?
     private(set) var availableGB: Double = 0

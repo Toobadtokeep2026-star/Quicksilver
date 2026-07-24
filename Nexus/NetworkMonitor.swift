@@ -1,7 +1,10 @@
 import Foundation
 import Network
+import Core
 
 final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
+    var diagnosticID: String { "network" }
+
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network")
     private var isRunning = false

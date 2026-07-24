@@ -19,6 +19,20 @@ struct ContentView: View {
             }
             .navigationTitle("Quicksilver")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        MemoryView()
+                    } label: {
+                        Label("Memory", systemImage: "brain.head.profile")
+                    }
+                }
+            }
+            .navigationDestination(for: String.self) { value in
+                if value == "memory" {
+                    MemoryView()
+                }
+            }
         }
     }
 

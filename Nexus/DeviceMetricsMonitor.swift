@@ -1,6 +1,9 @@
 import Foundation
+import Core
 
 final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
+    var diagnosticID: String { "device" }
+
     private var isRunning = false
     private var thermalToken: NSObjectProtocol?
     private var powerToken: NSObjectProtocol?

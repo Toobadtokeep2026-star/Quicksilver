@@ -7,10 +7,10 @@ import Core
 final class NexusCoordinator {
     private(set) var state = NexusState()
 
-    private let networkMonitor: NetworkMonitor
-    private let batteryMonitor: BatteryMonitor
-    private let storageMonitor: StorageMonitor
-    private let deviceMonitor: DeviceMetricsMonitor
+    private let networkMonitor: NetworkMonitoring
+    private let batteryMonitor: BatteryMonitoring
+    private let storageMonitor: StorageMonitoring
+    private let deviceMonitor: DeviceMetricsMonitoring
     private let processor: SignalProcessor
     private let insightEngine: InsightEngine
     private let automationBridge: AutomationBridge
@@ -21,10 +21,10 @@ final class NexusCoordinator {
     private var isRunning = false
 
     init(
-        networkMonitor: NetworkMonitor = NetworkMonitor(),
-        batteryMonitor: BatteryMonitor = BatteryMonitor(),
-        storageMonitor: StorageMonitor = StorageMonitor(),
-        deviceMonitor: DeviceMetricsMonitor = DeviceMetricsMonitor(),
+        networkMonitor: NetworkMonitoring = NetworkMonitor(),
+        batteryMonitor: BatteryMonitoring = BatteryMonitor(),
+        storageMonitor: StorageMonitoring = StorageMonitor(),
+        deviceMonitor: DeviceMetricsMonitoring = DeviceMetricsMonitor(),
         processor: SignalProcessor = SignalProcessor(),
         insightEngine: InsightEngine = InsightEngine(),
         automationBridge: AutomationBridge = AutomationBridge(),

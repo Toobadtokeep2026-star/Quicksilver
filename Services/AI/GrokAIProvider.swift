@@ -1,8 +1,5 @@
 import Foundation
 
-/// Real AI provider targeting the xAI / Grok API (OpenAI-compatible chat completions).
-/// Requires a valid API key stored in Keychain under `xai.apiKey`.
-/// Never logs the key or request bodies that could contain secrets.
 struct GrokAIProvider: AIProvider {
     let id = "grok"
     let displayName = "Grok (xAI)"
@@ -11,51 +8,31 @@ struct GrokAIProvider: AIProvider {
     private let baseURL: URL
     private let model: String
     private let session: URLSession
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
 
-    /// - Parameters:
-    ///   - apiKey: Must be non-empty. Caller is responsible for loading from Keychain.
-    ///   - model: Defaults to a current high-capability Grok model.
-    ///   - baseURL: Defaults to the public xAI endpoint. Fails fast if the constant is malformed.
-    init(
-        apiKey: String,
-        model: String = "grok-3",
-        baseURL: URL? = nil,
-        session: URLSession = .shared
-    ) throws {
-        guard !apiKey.isEmpty else {
-            throw AppError.apiKeyMissing
-        }
+    init(apiKey: String, model: String = "grok-3", baseURL: URL? = nil, session: URLSession = .shared) throws {
+        guard !apiKey.isEmpty else { throw AppError.apiKeyMissing }
 
-        let resolvedURL: URL
-        if let baseURL {
-            resolvedURL = baseURL
-        } else if let defaultURL = URL(string: "https://api.x.ai/v1") {
-            resolvedURL = defaultURL
-        } else {
-            // Should never happen with a hard-coded valid URL string.
-            throw AppError.configurationMissing("xAI base URL")
-        }
+        let resolved: URL
+        if let baseURL { resolved = baseURL }
+        else if let defaultURL = URL(string: "https://api.x.ai/v1") { resolved = defaultURL }
+        else { throw AppError.configurationMissing("xAI base URL") }
 
         self.apiKey = apiKey
         self.model = model
-        self.baseURL = resolvedURL
+        self.baseURL = resolved
         self.session = session
     }
 
-    /// Convenience that never throws for the common case (valid key + default endpoint).
-    /// Prefer the throwing initializer when the caller can handle configuration errors.
     static func make(apiKey: String, model: String = "grok-3") -> GrokAIProvider? {
         try? GrokAIProvider(apiKey: apiKey, model: model)
     }
 
-    var isAvailable: Bool {
-        !apiKey.isEmpty
-    }
+    var isAvailable: Bool { !apiKey.isEmpty }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
-        guard isAvailable else {
-            throw AppError.apiKeyMissing
-        }
+        guard isAvailable else { throw AppError.apiKeyMissing }
 
         let endpoint = baseURL.appendingPathComponent("chat/completions")
         var urlRequest = URLRequest(url: endpoint)
@@ -64,63 +41,44 @@ struct GrokAIProvider: AIProvider {
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.timeoutInterval = 60
 
-        var messages: [[String: String]] = []
+        var messages: [GrokAPI.ChatRequest.Message] = []
         if let system = request.systemPrompt, !system.isEmpty {
-            messages.append(["role": "system", "content": system])
+            messages.append(.init(role: "system", content: system))
         }
-        messages.append(["role": "user", "content": request.prompt])
+        messages.append(.init(role: "user", content: request.prompt))
 
-        let body: [String: Any] = [
-            "model": model,
-            "messages": messages,
-            "temperature": request.temperature,
-            "max_tokens": request.maxTokens,
-            "stream": false
-        ]
-
-        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let body = GrokAPI.ChatRequest(
+            model: model, messages: messages,
+            temperature: request.temperature, max_tokens: request.maxTokens, stream: false
+        )
+        urlRequest.httpBody = try encoder.encode(body)
 
         let (data, response) = try await session.data(for: urlRequest)
-
-        guard let http = response as? HTTPURLResponse else {
-            throw AppError.networkUnavailable
-        }
+        guard let http = response as? HTTPURLResponse else { throw AppError.networkUnavailable }
 
         guard (200...299).contains(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
             throw AppError.aiRequestFailed("Grok API error \(http.statusCode): \(message.prefix(200))")
         }
 
-        // Minimal parsing — avoid heavy Codable dependency for the first vertical slice.
-        // Next hardening pass will replace this with Codable models.
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let first = choices.first,
-              let message = first["message"] as? [String: Any],
-              let content = message["content"] as? String else {
-            throw AppError.aiRequestFailed("Unexpected response shape from Grok API")
+        let decoded: GrokAPI.ChatResponse
+        do { decoded = try decoder.decode(GrokAPI.ChatResponse.self, from: data) }
+        catch { throw AppError.aiRequestFailed("Failed to decode Grok response: \(error.localizedDescription)") }
+
+        guard let first = decoded.choices.first else {
+            throw AppError.aiRequestFailed("Grok response contained no choices")
         }
 
-        let finishReasonRaw = (first["finish_reason"] as? String) ?? "stop"
         let finishReason: AIResponse.FinishReason
-        switch finishReasonRaw {
+        switch first.finish_reason {
         case "length": finishReason = .length
-        case "stop": finishReason = .stop
         default: finishReason = .stop
         }
 
-        var usage: AIResponse.Usage?
-        if let usageDict = json["usage"] as? [String: Any] {
-            let prompt = usageDict["prompt_tokens"] as? Int ?? 0
-            let completion = usageDict["completion_tokens"] as? Int ?? 0
-            usage = .init(promptTokens: prompt, completionTokens: completion)
+        let usage: AIResponse.Usage? = decoded.usage.map {
+            .init(promptTokens: $0.prompt_tokens ?? 0, completionTokens: $0.completion_tokens ?? 0)
         }
 
-        return AIResponse(
-            requestID: request.id,
-            content: content,
-            finishReason: finishReason,
-            usage: usage
-        )
+        return AIResponse(requestID: request.id, content: first.message.content, finishReason: finishReason, usage: usage)
     }
 }

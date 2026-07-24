@@ -13,7 +13,6 @@ final class AIService {
     private let logger: LoggerService
     private let featureFlags: FeatureFlags
 
-    /// Preferred key under which the xAI / Grok API key is stored in Keychain.
     static let apiKeyKeychainAccount = "xai.apiKey"
 
     init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
@@ -24,7 +23,6 @@ final class AIService {
         if let provider {
             self.provider = provider
         } else {
-            // Auto-select: real provider only when a key is present and the feature is enabled.
             self.provider = Self.makeDefaultProvider(featureFlags: featureFlags, logger: logger)
         }
     }
@@ -32,12 +30,10 @@ final class AIService {
     private static func makeDefaultProvider(featureFlags: FeatureFlags, logger: LoggerService) -> AIProvider {
         if featureFlags.isEnabled("aiServiceEnabled"),
            let key = KeychainStore.string(forKey: apiKeyKeychainAccount),
-           !key.isEmpty {
-            if let grok = GrokAIProvider.make(apiKey: key) {
-                logger.info("AI provider selected: Grok (key present)", category: logger.ai)
-                return grok
-            }
-            logger.error("GrokAIProvider configuration failed — falling back to Mock", category: logger.ai)
+           !key.isEmpty,
+           let grok = GrokAIProvider.make(apiKey: key) {
+            logger.info("AI provider selected: Grok (key present)", category: logger.ai)
+            return grok
         }
         logger.info("AI provider selected: Mock", category: logger.ai)
         return MockAIProvider()
@@ -48,16 +44,11 @@ final class AIService {
         logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
 
-    /// Persist an API key and switch to the real provider if the feature flag allows it.
     func configureAPIKey(_ key: String?) {
         if let key, !key.isEmpty {
             KeychainStore.set(key, forKey: Self.apiKeyKeychainAccount)
-            if featureFlags.isEnabled("aiServiceEnabled") {
-                if let grok = GrokAIProvider.make(apiKey: key) {
-                    setProvider(grok)
-                } else {
-                    logger.error("Failed to create GrokAIProvider from key — keeping current provider", category: logger.ai)
-                }
+            if featureFlags.isEnabled("aiServiceEnabled"), let grok = GrokAIProvider.make(apiKey: key) {
+                setProvider(grok)
             }
         } else {
             KeychainStore.delete(forKey: Self.apiKeyKeychainAccount)
@@ -77,7 +68,6 @@ final class AIService {
         isProcessing = true
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
         logger.debug("AI request started: \(request.id)", category: logger.ai)
-
         defer { isProcessing = false }
 
         do {

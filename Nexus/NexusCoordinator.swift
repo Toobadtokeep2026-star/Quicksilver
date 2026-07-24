@@ -7,10 +7,10 @@ import Core
 final class NexusCoordinator {
     private(set) var state = NexusState()
 
-    private let networkMonitor: NetworkMonitor
-    private let batteryMonitor: BatteryMonitor
-    private let storageMonitor: StorageMonitor
-    private let deviceMonitor: DeviceMetricsMonitor
+    private let networkMonitor: NetworkMonitoring
+    private let batteryMonitor: BatteryMonitoring
+    private let storageMonitor: StorageMonitoring
+    private let deviceMonitor: DeviceMetricsMonitoring
     private let processor: SignalProcessor
     private let insightEngine: InsightEngine
     private let automationBridge: AutomationBridge
@@ -21,10 +21,10 @@ final class NexusCoordinator {
     private var isRunning = false
 
     init(
-        networkMonitor: NetworkMonitor = NetworkMonitor(),
-        batteryMonitor: BatteryMonitor = BatteryMonitor(),
-        storageMonitor: StorageMonitor = StorageMonitor(),
-        deviceMonitor: DeviceMetricsMonitor = DeviceMetricsMonitor(),
+        networkMonitor: NetworkMonitoring = NetworkMonitor(),
+        batteryMonitor: BatteryMonitoring = BatteryMonitor(),
+        storageMonitor: StorageMonitoring = StorageMonitor(),
+        deviceMonitor: DeviceMetricsMonitoring = DeviceMetricsMonitor(),
         processor: SignalProcessor = SignalProcessor(),
         insightEngine: InsightEngine = InsightEngine(),
         automationBridge: AutomationBridge = AutomationBridge(),
@@ -43,7 +43,6 @@ final class NexusCoordinator {
         self.pipeline = SignalPipeline(eventBus: eventBus, logger: logger)
     }
 
-    /// Convenience for UI — tracks through @Observable graph.
     var isActive: Bool { state.isActive }
 
     func start() {
@@ -75,9 +74,7 @@ final class NexusCoordinator {
         storageMonitor.start()
         deviceMonitor.start()
 
-        Task {
-            await publishCurrentTimeContext()
-        }
+        Task { await publishCurrentTimeContext() }
     }
 
     func stop() {
@@ -99,14 +96,8 @@ final class NexusCoordinator {
         currentPersonaID = personaID
     }
 
-    // MARK: - Monitor handlers → pipeline
-
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {
-        let signal = processor.networkSignal(
-            isConnected: connected,
-            isExpensive: expensive,
-            isConstrained: constrained
-        )
+        let signal = processor.networkSignal(isConnected: connected, isExpensive: expensive, isConstrained: constrained)
         pipeline.ingest(signal)
         updateLocalState(from: signal, expensive: expensive, constrained: constrained)
     }
@@ -120,7 +111,6 @@ final class NexusCoordinator {
     private func handleStorage(available: Double, total: Double) {
         let signal = processor.storageSignal(availableGB: available, totalGB: total)
         pipeline.ingest(signal)
-
         var newState = state
         newState.availableStorageGB = available
         newState.totalStorageGB = total
@@ -131,25 +121,18 @@ final class NexusCoordinator {
         var signal = processor.deviceSignal(thermal: thermal, lowPower: lowPower)
         if lowPower {
             signal = Signal(
-                id: signal.id,
-                source: signal.source,
-                category: signal.category,
-                timestamp: signal.timestamp,
-                value: signal.value,
-                numericValue: signal.numericValue,
-                confidence: signal.confidence,
+                id: signal.id, source: signal.source, category: signal.category,
+                timestamp: signal.timestamp, value: signal.value,
+                numericValue: signal.numericValue, confidence: signal.confidence,
                 metadata: signal.metadata.merging(["lowPower": "true"]) { _, new in new }
             )
         }
         pipeline.ingest(signal)
-
         var newState = state
         newState.thermalState = thermal
         newState.lowPowerMode = lowPower
         state = newState
     }
-
-    // MARK: - Local state + insights
 
     private func updateLocalState(from signal: Signal, expensive: Bool = false, constrained: Bool = false) {
         var newState = state
@@ -160,17 +143,14 @@ final class NexusCoordinator {
             newState.networkStatus = signal.value
             newState.isNetworkExpensive = expensive
             newState.isNetworkConstrained = constrained
-            newState.networkHealthScore = signal.value != "disconnected"
-                ? (constrained || expensive ? 70 : 95)
-                : 20
+            newState.networkHealthScore = signal.value != "disconnected" ? (constrained || expensive ? 70 : 95) : 20
         case .battery:
             if let level = signal.numericValue, level >= 0 {
                 newState.batteryLevel = level
                 newState.powerHealthScore = Int(level * 100)
             }
             newState.batteryState = signal.value
-        default:
-            break
+        default: break
         }
 
         let scores = [newState.networkHealthScore, newState.powerHealthScore]
@@ -185,16 +165,11 @@ final class NexusCoordinator {
         )
         newState.appendEvent(event)
 
-        if let insight = insightEngine.insight(
-            for: signal,
-            recent: newState.recentSignals,
-            personaID: currentPersonaID
-        ) {
+        if let insight = insightEngine.insight(for: signal, recent: newState.recentSignals, personaID: currentPersonaID) {
             newState.appendInsight(insight)
             logger.info("Insight: \(insight.title)", category: logger.nexus)
         }
 
-        // Full reassignment so Observation tracks the change reliably
         state = newState
     }
 
@@ -202,11 +177,11 @@ final class NexusCoordinator {
         let hour = Calendar.current.component(.hour, from: Date())
         let period: EventBus.TimePeriod
         switch hour {
-        case 5..<8:   period = .earlyMorning
-        case 8..<12:  period = .morning
+        case 5..<8: period = .earlyMorning
+        case 8..<12: period = .morning
         case 12..<17: period = .afternoon
         case 17..<21: period = .evening
-        default:      period = .night
+        default: period = .night
         }
         await eventBus.publish(.timeContextDidChange(period: period))
     }

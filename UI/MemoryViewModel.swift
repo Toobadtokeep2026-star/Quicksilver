@@ -28,7 +28,7 @@ final class MemoryViewModel {
         await container.memoryManager.set(
             key: "note.\(UUID().uuidString.prefix(8))",
             value: trimmed,
-            category: .note
+            category: .temporary
         )
         await load()
     }

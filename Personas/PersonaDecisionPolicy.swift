@@ -2,7 +2,7 @@ import Foundation
 import Core
 
 /// Decides which persona should be active given current context.
-/// Priority: task/intent first, then continuity, then environmental fallbacks.
+/// Priority: task/intent → continuity → environmental fallbacks.
 /// Pure and side-effect free so it stays easy to test and later replace with a learned policy.
 public struct PersonaDecisionPolicy: Sendable {
 
@@ -27,99 +27,109 @@ public struct PersonaDecisionPolicy: Sendable {
             return nil
         }
 
-        // 1. Strongest signal: explicit task kind
-        if let kind = context.taskKind {
-            switch kind {
-            case .building, .debugging:
-                return prefer(.forge, over: current)
-            case .exploring, .creative:
-                return prefer(.quicksilver, over: current)
-            case .reflecting:
-                return prefer(.eternal, over: current)
-            case .communicating:
-                // Default to adaptive unless more context arrives
-                return prefer(.quicksilver, over: current)
-            case .unknown:
-                break
-            }
+        if let candidate = fromTaskKind(context.taskKind) {
+            return prefer(candidate, over: current)
         }
-
-        // 2. Query intent (when a concrete request is in flight)
-        if let intent = context.queryIntent {
-            switch intent {
-            case .preciseTechnical, .diagnostic:
-                return prefer(.forge, over: current)
-            case .strategic, .creative:
-                return prefer(.quicksilver, over: current)
-            case .reflective:
-                return prefer(.eternal, over: current)
-            case .unknown:
-                break
-            }
+        if let candidate = fromQueryIntent(context.queryIntent) {
+            return prefer(candidate, over: current)
         }
-
-        // 3. Lightweight heuristics on free-text task description
-        if let task = context.taskDescription?.lowercased() {
-            if containsAny(task, ["architect", "implement", "refactor", "debug", "fix", "fix", "precision", "structure"]) {
-                return prefer(.forge, over: current)
-            }
-            if containsAny(task, ["idea", "brainstorm", "explore", "what if", "creative", "strategy", "option"]) {
-                return prefer(.quicksilver, over: current)
-            }
-            if containsAny(task, ["reflect", "review", "remember", "history", "long-term", "continuity", "pattern"]) {
-                return prefer(.eternal, over: current)
-            }
+        if let candidate = fromTaskDescription(context.taskDescription) {
+            return prefer(candidate, over: current)
         }
-
-        // 4. Continuity signal from recent memory
-        if !context.recentMemoryHints.isEmpty {
-            // Presence of substantial recent memory tilts toward Eternal
-            // (protects identity and prior context)
-            return prefer(.eternal, over: current)
+        if let candidate = fromMemoryHints(context.recentMemoryHints) {
+            return prefer(candidate, over: current)
         }
-
-        // 5. Environmental fallbacks (kept for when no richer context exists)
-
-        // Focus name
-        if let focus = context.focusName?.lowercased() {
-            if containsAny(focus, ["work", "deep", "focus"]) {
-                return prefer(.forge, over: current)
-            }
-            if containsAny(focus, ["sleep", "rest", "wind"]) {
-                return prefer(.eternal, over: current)
-            }
-            if containsAny(focus, ["personal", "creative"]) {
-                return prefer(.quicksilver, over: current)
-            }
+        if let candidate = fromFocus(context.focusName) {
+            return prefer(candidate, over: current)
         }
-
-        // Device pressure → calm, efficient persona
-        if context.isLowPower || (context.batteryLevel ?? 1.0) < 0.20 {
-            return prefer(.forge, over: current)
+        if let candidate = fromDevicePressure(context) {
+            return prefer(candidate, over: current)
         }
-        if let thermal = context.thermalState?.lowercased(),
-           containsAny(thermal, ["serious", "critical"]) {
-            return prefer(.forge, over: current)
-        }
-
-        // Time of day as last resort
-        switch context.timePeriod {
-        case .earlyMorning, .morning:
-            return prefer(.forge, over: current)
-        case .afternoon:
-            return prefer(.quicksilver, over: current)
-        case .evening, .night:
-            return prefer(.eternal, over: current)
-        case .none:
-            break
+        if let candidate = fromTimePeriod(context.timePeriod) {
+            return prefer(candidate, over: current)
         }
 
         return nil
     }
 
+    // MARK: - Signal extractors (priority order)
+
+    private func fromTaskKind(_ kind: TaskKind?) -> PersonaConfiguration? {
+        guard let kind else { return nil }
+        switch kind {
+        case .building, .debugging: return .forge
+        case .exploring, .creative: return .quicksilver
+        case .reflecting: return .eternal
+        case .communicating: return .quicksilver
+        case .unknown: return nil
+        }
+    }
+
+    private func fromQueryIntent(_ intent: QueryIntent?) -> PersonaConfiguration? {
+        guard let intent else { return nil }
+        switch intent {
+        case .preciseTechnical, .diagnostic: return .forge
+        case .strategic, .creative: return .quicksilver
+        case .reflective: return .eternal
+        case .unknown: return nil
+        }
+    }
+
+    private func fromTaskDescription(_ description: String?) -> PersonaConfiguration? {
+        guard let text = description?.lowercased() else { return nil }
+
+        if containsAny(text, ["architect", "implement", "refactor", "debug", "fix", "fix", "precision", "structure"]) {
+            return .forge
+        }
+        if containsAny(text, ["idea", "brainstorm", "explore", "what if", "creative", "strategy", "option"]) {
+            return .quicksilver
+        }
+        if containsAny(text, ["reflect", "review", "remember", "history", "long-term", "continuity", "pattern"]) {
+            return .eternal
+        }
+        return nil
+    }
+
+    private func fromMemoryHints(_ hints: [String]) -> PersonaConfiguration? {
+        // Presence of substantial recent memory tilts toward Eternal
+        hints.isEmpty ? nil : .eternal
+    }
+
+    private func fromFocus(_ focusName: String?) -> PersonaConfiguration? {
+        guard let focus = focusName?.lowercased() else { return nil }
+
+        if containsAny(focus, ["work", "deep", "focus"]) { return .forge }
+        if containsAny(focus, ["sleep", "rest", "wind"]) { return .eternal }
+        if containsAny(focus, ["personal", "creative"]) { return .quicksilver }
+        return nil
+    }
+
+    private func fromDevicePressure(_ context: PersonaContext) -> PersonaConfiguration? {
+        if context.isLowPower || (context.batteryLevel ?? 1.0) < 0.20 {
+            return .forge
+        }
+        if let thermal = context.thermalState?.lowercased(),
+           containsAny(thermal, ["serious", "critical"]) {
+            return .forge
+        }
+        return nil
+    }
+
+    private func fromTimePeriod(_ period: EventBus.TimePeriod?) -> PersonaConfiguration? {
+        switch period {
+        case .earlyMorning, .morning: return .forge
+        case .afternoon: return .quicksilver
+        case .evening, .night: return .eternal
+        case .none: return nil
+        }
+    }
+
     // MARK: - Helpers
 
-    private func prefer(_ candidate: PersonaConfiguration, over current: PersonaConfiguration) -> PersonaConfiguration? {
+    private func prefer(
+        _ candidate: PersonaConfiguration,
+        over current: PersonaConfiguration
+    ) -> PersonaConfiguration? {
         candidate.id == current.id ? nil : candidate
     }
 

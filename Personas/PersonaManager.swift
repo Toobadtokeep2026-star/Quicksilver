@@ -1,12 +1,13 @@
 import Foundation
-import Combine
+import Observation
 import Core
 
 /// Owns persona lifecycle and switching.
 /// Supports both explicit (override) and autonomous switching driven by context.
 @MainActor
-final class PersonaManager: ObservableObject {
-    @Published private(set) var state: PersonaState
+@Observable
+final class PersonaManager {
+    private(set) var state: PersonaState
 
     private let eventBus: EventBus
     private let logger: LoggerService

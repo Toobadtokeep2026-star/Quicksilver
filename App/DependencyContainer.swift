@@ -1,9 +1,11 @@
 import Foundation
 import SwiftUI
+import Observation
 import QuicksilverIntents
 
 @MainActor
-final class DependencyContainer: ObservableObject {
+@Observable
+final class DependencyContainer {
     let environment: AppEnvironment
     let configuration: AppConfiguration
     let featureFlags: FeatureFlags
@@ -58,7 +60,7 @@ final class DependencyContainer: ObservableObject {
         Task {
             try? await personaManager.switchTo(id: persona.id)
             nexus.updatePersonaContext(persona.id)
-            objectWillChange.send()
+            // No manual objectWillChange needed — @Observable tracks the graph
         }
     }
 }

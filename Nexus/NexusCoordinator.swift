@@ -1,10 +1,11 @@
 import Foundation
-import Combine
+import Observation
 import Core
 
 @MainActor
-final class NexusCoordinator: ObservableObject {
-    @Published private(set) var state = NexusState()
+@Observable
+final class NexusCoordinator {
+    private(set) var state = NexusState()
 
     private let networkMonitor: NetworkMonitor
     private let batteryMonitor: BatteryMonitor
@@ -41,6 +42,9 @@ final class NexusCoordinator: ObservableObject {
         self.eventBus = eventBus
         self.pipeline = SignalPipeline(eventBus: eventBus, logger: logger)
     }
+
+    /// Convenience for UI — tracks through @Observable graph.
+    var isActive: Bool { state.isActive }
 
     func start() {
         guard !isRunning else { return }

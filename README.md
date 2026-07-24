@@ -6,11 +6,20 @@ Native iOS intelligence framework: modular architecture, adaptive personas, Nexu
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
 ```
 
+## Current status (2026-07-24)
+
+All four simultaneous work items landed:
+
+1. **ViewModel ↔ DependencyContainer wiring** — Home / Diagnostics / Ask / Memory / Settings all receive the shared container and pull live NexusState + active persona on refresh. Container remains single source of truth.
+2. **Live signal → Insight → persona presentation path** — Expanded `NexusIntelligenceTests` with full path coverage (signal creation → InsightEngine → state append → personaStyle tagging). Engine stays persona-agnostic by design.
+3. **AutomationBridge + App Intents** — Bridge now reports real network / battery / health from NexusState. `CaptureMemoryIntent` actually writes to MemoryManager (persona-scoped, importance-tagged). Shortcuts surface is live.
+4. **Device validation path** — Ready for iPhone 14 on iOS 27 beta. See below.
+
 ## Current surfaces
 
 | Screen | Role |
 |--------|------|
-| **Home** | Persona switcher, Nexus health summary |
+| **Home** | Persona switcher, Nexus health summary, latest insight |
 | **Ask** | Persona-aware chat with Memory-backed history |
 | **Memory** | Policy-filtered notes + importance |
 | **Diagnostics** | Insights + recent signals |
@@ -39,6 +48,22 @@ open Quicksilver.xcodeproj
 ```
 
 Select your Team for Automatic signing, then run on **iPhone 14** (or Simulator).
+
+### On-device only (iPhone 14 / iOS 27 beta — no Mac)
+
+Quicksilver is structured for SideStore / TrollStore-style sideloading:
+
+1. Generate the Xcode project on any Mac (or CI) with `xcodegen generate`.
+2. Archive + export an IPA (or use an existing SideStore-compatible build pipeline).
+3. Install via SideStore on the target iPhone 14.
+4. First launch: open **Settings** → paste xAI key → enable AI Service.
+5. Validate:
+   - Home shows live Nexus health + persona switcher
+   - Diagnostics shows signals + insights after a few seconds
+   - Ask uses the active persona + Memory context
+   - Siri / Shortcuts: “What’s the context in Quicksilver”, “Remember this in Quicksilver”, “Ask Nexus”
+
+No private APIs. All monitors use public Apple frameworks only.
 
 ### Enable real Grok
 

@@ -19,6 +19,11 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink {
+                        AskView()
+                    } label: {
+                        Label("Ask", systemImage: "text.bubble")
+                    }
+                    NavigationLink {
                         DiagnosticsView()
                     } label: {
                         Label("Diagnostics", systemImage: "waveform.path.ecg")

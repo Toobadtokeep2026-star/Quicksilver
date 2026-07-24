@@ -15,17 +15,37 @@ struct GrokAIProvider: AIProvider {
     /// - Parameters:
     ///   - apiKey: Must be non-empty. Caller is responsible for loading from Keychain.
     ///   - model: Defaults to a current high-capability Grok model.
-    ///   - baseURL: Defaults to the public xAI endpoint.
+    ///   - baseURL: Defaults to the public xAI endpoint. Fails fast if the constant is malformed.
     init(
         apiKey: String,
         model: String = "grok-3",
-        baseURL: URL = URL(string: "https://api.x.ai/v1")!,
+        baseURL: URL? = nil,
         session: URLSession = .shared
-    ) {
+    ) throws {
+        guard !apiKey.isEmpty else {
+            throw AppError.apiKeyMissing
+        }
+
+        let resolvedURL: URL
+        if let baseURL {
+            resolvedURL = baseURL
+        } else if let defaultURL = URL(string: "https://api.x.ai/v1") {
+            resolvedURL = defaultURL
+        } else {
+            // Should never happen with a hard-coded valid URL string.
+            throw AppError.configurationMissing("xAI base URL")
+        }
+
         self.apiKey = apiKey
         self.model = model
-        self.baseURL = baseURL
+        self.baseURL = resolvedURL
         self.session = session
+    }
+
+    /// Convenience that never throws for the common case (valid key + default endpoint).
+    /// Prefer the throwing initializer when the caller can handle configuration errors.
+    static func make(apiKey: String, model: String = "grok-3") -> GrokAIProvider? {
+        try? GrokAIProvider(apiKey: apiKey, model: model)
     }
 
     var isAvailable: Bool {
@@ -71,7 +91,8 @@ struct GrokAIProvider: AIProvider {
             throw AppError.aiRequestFailed("Grok API error \(http.statusCode): \(message.prefix(200))")
         }
 
-        // Minimal parsing — avoid heavy Codable dependency for the first vertical slice
+        // Minimal parsing — avoid heavy Codable dependency for the first vertical slice.
+        // Next hardening pass will replace this with Codable models.
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]],
               let first = choices.first,

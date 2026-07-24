@@ -33,8 +33,11 @@ final class AIService {
         if featureFlags.isEnabled("aiServiceEnabled"),
            let key = KeychainStore.string(forKey: apiKeyKeychainAccount),
            !key.isEmpty {
-            logger.info("AI provider selected: Grok (key present)", category: logger.ai)
-            return GrokAIProvider(apiKey: key)
+            if let grok = GrokAIProvider.make(apiKey: key) {
+                logger.info("AI provider selected: Grok (key present)", category: logger.ai)
+                return grok
+            }
+            logger.error("GrokAIProvider configuration failed — falling back to Mock", category: logger.ai)
         }
         logger.info("AI provider selected: Mock", category: logger.ai)
         return MockAIProvider()
@@ -50,7 +53,11 @@ final class AIService {
         if let key, !key.isEmpty {
             KeychainStore.set(key, forKey: Self.apiKeyKeychainAccount)
             if featureFlags.isEnabled("aiServiceEnabled") {
-                setProvider(GrokAIProvider(apiKey: key))
+                if let grok = GrokAIProvider.make(apiKey: key) {
+                    setProvider(grok)
+                } else {
+                    logger.error("Failed to create GrokAIProvider from key — keeping current provider", category: logger.ai)
+                }
             }
         } else {
             KeychainStore.delete(forKey: Self.apiKeyKeychainAccount)

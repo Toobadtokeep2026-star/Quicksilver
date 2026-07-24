@@ -21,9 +21,7 @@ struct ContentView: View {
             }
             .navigationTitle("Quicksilver")
             .navigationBarTitleDisplayMode(.large)
-            .onAppear {
-                container.nexus.start()
-            }
+            // Nexus is started once by DependencyContainer. Do not restart here.
         }
     }
 

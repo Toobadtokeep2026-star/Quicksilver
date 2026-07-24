@@ -4,20 +4,20 @@ import Core
 
 @MainActor
 @Observable
-final class MemoryManager {
-    private(set) var items: [MemoryItem] = []
+public final class MemoryManager {
+    public private(set) var items: [MemoryItem] = []
 
     private let store: MemoryStore
     private let eventBus: EventBus
     private let logger: LoggerService
 
-    init(store: MemoryStore, eventBus: EventBus, logger: LoggerService) {
+    public init(store: MemoryStore, eventBus: EventBus, logger: LoggerService) {
         self.store = store
         self.eventBus = eventBus
         self.logger = logger
     }
 
-    func load() async {
+    public func load() async {
         do {
             items = try await store.loadAll()
             logger.info("Loaded \(items.count) memory items", category: logger.memory)
@@ -26,8 +26,7 @@ final class MemoryManager {
         }
     }
 
-    /// Write or update a memory item.
-    func set(
+    public func set(
         key: String,
         value: String,
         category: MemoryItem.Category,
@@ -66,12 +65,11 @@ final class MemoryManager {
         }
     }
 
-    func value(for key: String, category: MemoryItem.Category) -> String? {
+    public func value(for key: String, category: MemoryItem.Category) -> String? {
         items.first { $0.key == key && $0.category == category }?.value
     }
 
-    /// Items visible to a given persona (shared + scoped), sorted by importance then recency.
-    func items(forPersona personaID: String?) -> [MemoryItem] {
+    public func items(forPersona personaID: String?) -> [MemoryItem] {
         let filtered: [MemoryItem]
         if let personaID {
             filtered = items.filter { $0.personaScope == nil || $0.personaScope == personaID }
@@ -84,8 +82,7 @@ final class MemoryManager {
         }
     }
 
-    /// Policy-aware query: applies persona scope preference + retention threshold.
-    func items(matching query: MemoryQuery, policy: MemoryPolicy? = nil) -> [MemoryItem] {
+    public func items(matching query: MemoryQuery, policy: MemoryPolicy? = nil) -> [MemoryItem] {
         var effective = query
         if let policy {
             if effective.minimumImportance == nil {
@@ -101,7 +98,7 @@ final class MemoryManager {
         return effective.apply(to: items)
     }
 
-    func delete(id: UUID) async {
+    public func delete(id: UUID) async {
         do {
             try await store.delete(id: id)
             items.removeAll { $0.id == id }
@@ -111,8 +108,7 @@ final class MemoryManager {
         }
     }
 
-    /// User-initiated full wipe. Irreversible.
-    func clearAll() async {
+    public func clearAll() async {
         let ids = items.map(\.id)
         for id in ids {
             await delete(id: id)
@@ -121,9 +117,7 @@ final class MemoryManager {
         logger.info("Memory cleared by user request", category: logger.memory)
     }
 
-    /// Privacy-respecting export. Returns a JSON string of current items.
-    /// Callers are responsible for deciding whether and how to share the data.
-    func exportJSON() throws -> String {
+    public func exportJSON() throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601

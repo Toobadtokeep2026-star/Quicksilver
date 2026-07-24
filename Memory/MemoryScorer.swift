@@ -1,8 +1,8 @@
 import Foundation
 import Core
 
-/// Lightweight, pure importance scorer.
-/// Keeps scoring deterministic and testable so Eternal can later replace it with a learned model.
+/// Lightweight, pure importance scorer + decay.
+/// Keeps scoring deterministic and testable.
 enum MemoryScorer {
 
     private static let categoryBase: [MemoryItem.Category: Double] = [
@@ -11,6 +11,15 @@ enum MemoryScorer {
         .project: 0.70,
         .conversation: 0.45,
         .temporary: 0.25
+    ]
+
+    /// Half-life in days for decay. Temporary memories decay fastest.
+    private static let halfLifeDays: [MemoryItem.Category: Double] = [
+        .temporary: 2,
+        .conversation: 7,
+        .project: 30,
+        .preference: 90,
+        .system: 180
     ]
 
     static func score(
@@ -33,5 +42,17 @@ enum MemoryScorer {
         }
 
         return min(max(score, 0), 1)
+    }
+
+    /// Returns a decayed importance value based on time since last update.
+    /// Pure function — does not mutate the stored item.
+    static func decayedImportance(for item: MemoryItem, now: Date = Date()) -> Double {
+        let halfLife = halfLifeDays[item.category] ?? 14
+        let ageDays = max(now.timeIntervalSince(item.updatedAt) / 86_400, 0)
+        // Exponential decay: importance * 0.5^(age/halfLife)
+        let factor = pow(0.5, ageDays / halfLife)
+        let decayed = item.importance * factor
+        // Floor so very old items don't vanish completely from policy views unless they were already low
+        return min(max(decayed, 0.05), 1)
     }
 }

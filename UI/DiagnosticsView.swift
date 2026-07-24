@@ -1,4 +1,5 @@
 import SwiftUI
+import Nexus
 
 struct DiagnosticsView: View {
     @Environment(DependencyContainer.self) private var container
@@ -17,14 +18,10 @@ struct DiagnosticsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Refresh") {
-                    viewModel?.refresh()
-                }
+                Button("Refresh") { viewModel?.refresh() }
             }
         }
-        .onDisappear {
-            viewModel?.stopLiveRefresh()
-        }
+        .onDisappear { viewModel?.stopLiveRefresh() }
     }
 
     @ViewBuilder
@@ -53,13 +50,9 @@ struct DiagnosticsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(display.title).font(.subheadline.weight(.medium))
                             Text(display.body).font(.caption).foregroundStyle(.secondary)
-                            Text(display.styleLabel)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                            Text(display.styleLabel).font(.caption2).foregroundStyle(.tertiary)
                             if let action = display.action {
-                                Text(action)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                Text(action).font(.caption2).foregroundStyle(.tertiary)
                             }
                         }
                         .padding(.vertical, 2)
@@ -77,8 +70,7 @@ struct DiagnosticsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 72, alignment: .leading)
-                            Text(signal.value)
-                                .font(.subheadline)
+                            Text(signal.value).font(.subheadline)
                             Spacer()
                             Text(signal.timestamp, style: .time)
                                 .font(.caption2)

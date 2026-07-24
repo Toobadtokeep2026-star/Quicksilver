@@ -26,21 +26,65 @@ final class MemoryManager {
         }
     }
 
-    func set(key: String, value: String, category: MemoryItem.Category, metadata: [String: String] = [:]) async {
+    /// Write or update a memory item.
+    /// - Parameters:
+    ///   - importanceBoost: Optional explicit importance (0...1). Overrides heuristic when provided.
+    ///   - personaScope: Optional persona id that primarily owns this memory.
+    func set(
+        key: String,
+        value: String,
+        category: MemoryItem.Category,
+        metadata: [String: String] = [:],
+        importanceBoost: Double? = nil,
+        personaScope: String? = nil
+    ) async {
         if let existing = items.first(where: { $0.key == key && $0.category == category }) {
             var updated = existing
             updated.value = value
             updated.updatedAt = Date()
             updated.metadata = metadata
+            updated.importance = MemoryScorer.score(
+                category: category,
+                value: value,
+                explicitBoost: importanceBoost,
+                existing: existing.importance
+            )
+            if let personaScope { updated.personaScope = personaScope }
             await persist(updated)
         } else {
-            let item = MemoryItem(key: key, category: category, value: value, metadata: metadata)
+            let importance = MemoryScorer.score(
+                category: category,
+                value: value,
+                explicitBoost: importanceBoost
+            )
+            let item = MemoryItem(
+                key: key,
+                category: category,
+                value: value,
+                metadata: metadata,
+                importance: importance,
+                personaScope: personaScope
+            )
             await persist(item)
         }
     }
 
     func value(for key: String, category: MemoryItem.Category) -> String? {
         items.first { $0.key == key && $0.category == category }?.value
+    }
+
+    /// Items visible to a given persona (shared + scoped to that persona), sorted by importance then recency.
+    func items(forPersona personaID: String?) -> [MemoryItem] {
+        let filtered: [MemoryItem]
+        if let personaID {
+            filtered = items.filter { $0.personaScope == nil || $0.personaScope == personaID }
+        } else {
+            filtered = items
+        }
+        return filtered.sorted {
+            if $0.importance != $1.importance { return $0.importance > $1.importance }
+            return $0.updatedAt > $1.updatedAt
+        }
     }
 
     func delete(id: UUID) async {

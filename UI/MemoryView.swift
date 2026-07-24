@@ -34,7 +34,7 @@ struct MemoryView: View {
                 }
             }
 
-            Section("Stored") {
+            Section("Stored (by importance)") {
                 if vm.isLoading {
                     ProgressView()
                 } else if vm.items.isEmpty {
@@ -42,9 +42,24 @@ struct MemoryView: View {
                 } else {
                     ForEach(vm.items) { item in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(item.key).font(.caption).foregroundStyle(.secondary)
+                            HStack {
+                                Text(item.key)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                importanceBadge(item.importance)
+                            }
                             Text(item.value).font(.body)
-                            Text(item.updatedAt, style: .relative).font(.caption2).foregroundStyle(.tertiary)
+                            HStack {
+                                Text(item.updatedAt, style: .relative)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                if let scope = item.personaScope {
+                                    Text("· \(scope)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
                         }
                         .padding(.vertical, 2)
                     }
@@ -52,5 +67,16 @@ struct MemoryView: View {
             }
         }
         .task { await vm.load() }
+    }
+
+    private func importanceBadge(_ value: Double) -> some View {
+        let percent = Int(value * 100)
+        let color: Color = value >= 0.7 ? .green : (value >= 0.4 ? .orange : .secondary)
+        return Text("\(percent)%")
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15), in: Capsule())
     }
 }

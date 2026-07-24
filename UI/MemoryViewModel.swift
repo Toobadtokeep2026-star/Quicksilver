@@ -16,17 +16,21 @@ final class MemoryViewModel {
     func load() async {
         isLoading = true
         await container.memoryManager.load()
-        items = container.memoryManager.items.sorted { $0.updatedAt > $1.updatedAt }
+        // Show items relevant to the active persona, ranked by importance
+        let personaID = container.activeConfiguration.id
+        items = container.memoryManager.items(forPersona: personaID)
         isLoading = false
     }
 
     func addQuickNote(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        let personaID = container.activeConfiguration.id
         await container.memoryManager.set(
             key: "note.\(UUID().uuidString.prefix(8))",
             value: trimmed,
-            category: .temporary
+            category: .temporary,
+            personaScope: personaID
         )
         await load()
     }

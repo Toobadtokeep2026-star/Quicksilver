@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MemoryView: View {
     @Environment(DependencyContainer.self) private var container

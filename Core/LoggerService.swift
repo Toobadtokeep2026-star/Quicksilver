@@ -35,4 +35,21 @@ final class LoggerService: @unchecked Sendable {
     func error(_ message: String, category: Logger? = nil) {
         (category ?? general).error("\(message, privacy: .public)")
     }
+
+    // MARK: - Redaction
+
+    /// Returns a safe-to-log version of a potentially sensitive string.
+    /// - API keys and long tokens are fully masked.
+    /// - Short values are truncated.
+    static func redact(_ value: String?, maxVisible: Int = 4) -> String {
+        guard let value, !value.isEmpty else { return "<empty>" }
+        if value.count > 20 || value.lowercased().contains("key") || value.hasPrefix("xai-") || value.hasPrefix("sk-") {
+            return "<redacted len=\(value.count)>"
+        }
+        if value.count <= maxVisible {
+            return String(repeating: "*", count: value.count)
+        }
+        let prefix = value.prefix(maxVisible)
+        return "\(prefix)…<redacted>"
+    }
 }

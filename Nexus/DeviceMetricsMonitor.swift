@@ -1,7 +1,12 @@
 import Foundation
 
+/// Observes thermal state and Low Power Mode via ProcessInfo notifications.
+/// Correctly stores and removes block-based observer tokens.
 final class DeviceMetricsMonitor: @unchecked Sendable {
     private var isRunning = false
+    private var thermalToken: NSObjectProtocol?
+    private var powerToken: NSObjectProtocol?
+
     private(set) var thermalStateDescription: String = "unknown"
     private(set) var isLowPowerMode = false
     var onChange: ((String, Bool) -> Void)?
@@ -10,13 +15,40 @@ final class DeviceMetricsMonitor: @unchecked Sendable {
         guard !isRunning else { return }
         isRunning = true
         update()
-        NotificationCenter.default.addObserver(forName: Notification.Name.NSProcessInfoThermalStateDidChange, object: nil, queue: .main) { [weak self] _ in self?.update() }
-        NotificationCenter.default.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) { [weak self] _ in self?.update() }
+
+        thermalToken = NotificationCenter.default.addObserver(
+            forName: Notification.Name.NSProcessInfoThermalStateDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.update()
+        }
+
+        powerToken = NotificationCenter.default.addObserver(
+            forName: .NSProcessInfoPowerStateDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.update()
+        }
     }
 
     func stop() {
+        guard isRunning else { return }
         isRunning = false
-        NotificationCenter.default.removeObserver(self)
+
+        if let thermalToken {
+            NotificationCenter.default.removeObserver(thermalToken)
+            self.thermalToken = nil
+        }
+        if let powerToken {
+            NotificationCenter.default.removeObserver(powerToken)
+            self.powerToken = nil
+        }
+    }
+
+    deinit {
+        stop()
     }
 
     private func update() {

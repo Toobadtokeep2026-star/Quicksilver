@@ -3,6 +3,7 @@ import Foundation
 import UIKit
 #endif
 
+/// Observes battery level and state via UIDevice notifications.
 final class BatteryMonitor: @unchecked Sendable {
     private var isRunning = false
     private(set) var level: Double = -1
@@ -14,8 +15,18 @@ final class BatteryMonitor: @unchecked Sendable {
         isRunning = true
         #if canImport(UIKit)
         UIDevice.current.isBatteryMonitoringEnabled = true
-        NotificationCenter.default.addObserver(self, selector: #selector(batteryChanged), name: UIDevice.batteryLevelDidChangeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(batteryChanged), name: UIDevice.batteryStateDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(batteryChanged),
+            name: UIDevice.batteryLevelDidChangeNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(batteryChanged),
+            name: UIDevice.batteryStateDidChangeNotification,
+            object: nil
+        )
         update()
         #endif
     }
@@ -29,8 +40,13 @@ final class BatteryMonitor: @unchecked Sendable {
         #endif
     }
 
+    deinit {
+        stop()
+    }
+
     #if canImport(UIKit)
     @objc private func batteryChanged() { update() }
+
     private func update() {
         let device = UIDevice.current
         level = Double(device.batteryLevel)

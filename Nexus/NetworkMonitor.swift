@@ -1,6 +1,7 @@
 import Foundation
 import Network
 
+/// Observes network path changes via NWPathMonitor.
 final class NetworkMonitor: @unchecked Sendable {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network")
@@ -28,5 +29,10 @@ final class NetworkMonitor: @unchecked Sendable {
         guard isRunning else { return }
         monitor.cancel()
         isRunning = false
+        monitor.pathUpdateHandler = nil
+    }
+
+    deinit {
+        stop()
     }
 }

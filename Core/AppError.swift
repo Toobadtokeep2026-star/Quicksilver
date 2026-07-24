@@ -8,6 +8,8 @@ enum AppError: Error, LocalizedError, Sendable {
     case nexusNotReady
     case networkUnavailable
     case unsupportedFeature(String)
+    case apiKeyMissing
+    case aiRequestFailed(String)
     case unknown(String)
 
     var errorDescription: String? {
@@ -22,6 +24,10 @@ enum AppError: Error, LocalizedError, Sendable {
             return "Network is currently unavailable"
         case .unsupportedFeature(let name):
             return "Feature not yet supported: \(name)"
+        case .apiKeyMissing:
+            return "AI API key is not configured"
+        case .aiRequestFailed(let detail):
+            return "AI request failed: \(detail)"
         case .unknown(let message):
             return message
         }

@@ -1,10 +1,11 @@
 import Foundation
-import Combine
+import Observation
 import Core
 
 @MainActor
-final class MemoryManager: ObservableObject {
-    @Published private(set) var items: [MemoryItem] = []
+@Observable
+final class MemoryManager {
+    private(set) var items: [MemoryItem] = []
 
     private let store: MemoryStore
     private let eventBus: EventBus

@@ -14,13 +14,7 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
-
 jobs:
-  # ------------------------------------------------------------------
-  # Fast structure + contract checks (Linux)
-  # ------------------------------------------------------------------
   structure:
     name: Structure & Contracts
     runs-on: ubuntu-latest
@@ -66,9 +60,6 @@ jobs:
           done
           echo "Structure and contracts verified."
 
-  # ------------------------------------------------------------------
-  # SPM unit tests (Core / Memory / Personas / Nexus / AI)
-  # ------------------------------------------------------------------
   spm-test:
     name: SPM Unit Tests
     runs-on: macos-15
@@ -82,7 +73,6 @@ jobs:
           set -euo pipefail
           echo "Available Xcode apps:"
           ls /Applications | grep -i xcode || true
-          # Prefer newest installed Xcode
           if [[ -d /Applications/Xcode_16.4.app ]]; then
             sudo xcode-select -s /Applications/Xcode_16.4.app
           elif [[ -d /Applications/Xcode_16.3.app ]]; then
@@ -135,9 +125,6 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # ------------------------------------------------------------------
-  # Full iOS app: XcodeGen → Simulator build (no signing required)
-  # ------------------------------------------------------------------
   ios-simulator:
     name: iOS Simulator Build
     runs-on: macos-15
@@ -179,7 +166,10 @@ jobs:
           set -euo pipefail
           echo "Generating Quicksilver.xcodeproj from project.yml…"
           xcodegen generate
-          test -d Quicksilver.xcodeproj || (echo "::error::XcodeGen did not produce Quicksilver.xcodeproj" && exit 1)
+          if [[ ! -d Quicksilver.xcodeproj ]]; then
+            echo "::error::XcodeGen did not produce Quicksilver.xcodeproj"
+            exit 1
+          fi
           echo "Project generated."
           xcodebuild -list -project Quicksilver.xcodeproj
 
@@ -196,26 +186,28 @@ jobs:
         id: dest
         run: |
           set -euo pipefail
-          # Prefer iPhone 16 / 15 / 14 simulators in that order
-          DEST=$(xcrun simctl list devices available | grep -E "iPhone 16|iPhone 15|iPhone 14" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
-          if [[ -z "${DEST}" ]]; then
-            # Fallback: any available iPhone
-            DEST=$(xcrun simctl list devices available | grep -i "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
-          fi
-          if [[ -z "${DEST}" ]]; then
+          DEST=""
+          for pattern in "iPhone 16" "iPhone 15" "iPhone 14" "iPhone"; do
+            line=$(xcrun simctl list devices available 2>/dev/null | grep -i "$pattern" | head -1 || true)
+            if [[ -n "$line" ]]; then
+              DEST=$(echo "$line" | grep -oE '\([A-F0-9-]{36}\)' | tr -d '()' || true)
+              if [[ -n "$DEST" ]]; then
+                echo "Matched: $line"
+                break
+              fi
+            fi
+          done
+          if [[ -z "$DEST" ]]; then
             echo "::error::No iPhone simulator found"
             xcrun simctl list devices available || true
             exit 1
           fi
-          echo "Using simulator UDID: ${DEST}"
-          echo "udid=${DEST}" >> "$GITHUB_OUTPUT"
-          # Also print a human-readable name
-          xcrun simctl list devices | grep "${DEST}" || true
+          echo "Using simulator UDID: $DEST"
+          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
 
       - name: Build for iOS Simulator
         run: |
           set -euo pipefail
-          set -o pipefail
           echo "Building scheme Quicksilver for iOS Simulator…"
           xcodebuild \
             -project Quicksilver.xcodeproj \
@@ -224,25 +216,18 @@ jobs:
             -destination "platform=iOS Simulator,id=${{ steps.dest.outputs.udid }}" \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY= \
             CODE_SIGNING_REQUIRED=NO \
-            build \
-            2>&1 | tee xcodebuild.log | xcpretty --color || {
-              # xcpretty may not be installed; fall back to raw log
-              echo "xcpretty unavailable or build failed — showing tail of log"
-              tail -n 80 xcodebuild.log || true
-              # Re-run without pipe to surface real exit code if needed
-              exit ${PIPESTATUS[0]:-1}
-            }
+            build | tee xcodebuild.log
 
       - name: Build diagnostics on failure
         if: failure()
         run: |
-          echo "::group::Last 120 lines of xcodebuild.log"
-          tail -n 120 xcodebuild.log || true
+          echo "::group::Last 150 lines of xcodebuild.log"
+          tail -n 150 xcodebuild.log || true
           echo "::endgroup::"
-          echo "::group::DerivedData logs (if any)"
-          find DerivedData -name "*.log" 2>/dev/null | head -20 || true
+          echo "::group::Errors only"
+          grep -iE "error:|fatal|failed" xcodebuild.log | tail -n 40 || true
           echo "::endgroup::"
 
       - name: Upload build logs
@@ -256,7 +241,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-      - name: Upload generated project (debug aid)
+      - name: Upload generated project on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:

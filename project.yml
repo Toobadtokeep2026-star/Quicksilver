@@ -27,9 +27,10 @@ targets:
       - path: Nexus
       - path: Services/AI
       - path: Intents
-      - path: Resources
-        optional: true
       - path: Models
+        optional: true
+    resources:
+      - path: Resources
         optional: true
     settings:
       base:

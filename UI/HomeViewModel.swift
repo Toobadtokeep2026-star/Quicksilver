@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+import Core
+import Personas
+import Nexus
 
 @MainActor
 @Observable
@@ -26,8 +29,6 @@ final class HomeViewModel {
         refresh()
     }
 
-    /// Pulls the current truth from DependencyContainer (persona + live NexusState).
-    /// Call on appear, after persona switch, and whenever the user forces a refresh.
     func refresh() {
         let config = container.activeConfiguration
         personaDisplayName = config.displayName
@@ -50,7 +51,6 @@ final class HomeViewModel {
     func switchPersona(to id: String) {
         guard id != activePersonaID else { return }
         container.switchPersona(to: id)
-        // Brief delay so the persona switch + Nexus context update can settle
         Task {
             try? await Task.sleep(for: .milliseconds(120))
             refresh()

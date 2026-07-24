@@ -29,7 +29,6 @@ final class AskViewModel {
         let config = container.activeConfiguration
         let policy = container.personaManager.activeMemoryPolicy
 
-        // Gather compact context — no prompt construction in the ViewModel beyond fragments
         await container.memoryManager.load()
         let memoryQuery = MemoryQuery(
             personaScope: policy.prefersScopedView ? config.id : nil,
@@ -40,7 +39,7 @@ final class AskViewModel {
             .map { $0.value }
 
         let state = container.nexus.state
-        let insightTitles = state.recentInsights.prefix(3).map(\ .title)
+        let insightTitles = state.recentInsights.prefix(3).map { $0.title }
         var deviceParts: [String] = []
         if let level = state.batteryLevel {
             deviceParts.append("Battery \(Int(level * 100))%")

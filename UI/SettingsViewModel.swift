@@ -1,5 +1,7 @@
 import Foundation
 import Observation
+import Core
+import ServicesAI
 
 @MainActor
 @Observable
@@ -23,7 +25,6 @@ final class SettingsViewModel {
         hasStoredKey = !(key?.isEmpty ?? true)
         providerName = container.aiService.currentProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
-        // Never put the real key into the draft field after load — only mask state
         if hasStoredKey && apiKeyDraft.isEmpty {
             apiKeyDraft = ""
         }
@@ -38,7 +39,6 @@ final class SettingsViewModel {
         }
 
         container.aiService.configureAPIKey(trimmed)
-        // Clear draft so the secret is not left in UI state longer than needed
         apiKeyDraft = ""
         refresh()
 
@@ -64,12 +64,10 @@ final class SettingsViewModel {
 
     func setAIEnabled(_ enabled: Bool) {
         container.featureFlags.set("aiServiceEnabled", enabled: enabled)
-        // Re-evaluate provider now that the flag changed
         if enabled {
             let key = KeychainStore.string(forKey: AIService.apiKeyKeychainAccount)
             container.aiService.configureAPIKey(key)
         } else {
-            // Keep key in Keychain but force Mock while disabled
             container.aiService.setProvider(MockAIProvider())
         }
         refresh()

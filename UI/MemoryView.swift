@@ -1,5 +1,7 @@
 import SwiftUI
 import UIKit
+import Core
+import Memory
 
 struct MemoryView: View {
     @Environment(DependencyContainer.self) private var container
@@ -124,8 +126,6 @@ struct MemoryView: View {
             .background(color.opacity(0.15), in: Capsule())
     }
 }
-
-// MARK: - Share helpers
 
 private struct SharePayload: Identifiable {
     let id = UUID()

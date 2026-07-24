@@ -3,36 +3,53 @@ import SwiftUI
 /// Root content view.
 /// Surfaces the active persona, live Nexus health signals, and the most recent insight.
 /// Follows HIG: clear hierarchy, readable typography, sufficient contrast, no decorative noise.
+/// Now driven by HomeViewModel — no direct reach into container.nexus or personaManager.
 struct ContentView: View {
     @Environment(DependencyContainer.self) private var container
+    @State private var viewModel: HomeViewModel?
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    personaHeader
-                    nexusStatusCard
-                    metricsRow
-                    if let insight = container.nexus.state.recentInsights.first {
-                        insightCard(insight)
-                    }
+            Group {
+                if let vm = viewModel {
+                    dashboard(vm)
+                } else {
+                    ProgressView()
+                        .onAppear {
+                            viewModel = HomeViewModel(container: container)
+                        }
                 }
-                .padding()
             }
             .navigationTitle("Quicksilver")
             .navigationBarTitleDisplayMode(.large)
-            // Nexus is started once by DependencyContainer. Do not restart here.
+        }
+    }
+
+    @ViewBuilder
+    private func dashboard(_ vm: HomeViewModel) -> some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                personaHeader(vm)
+                nexusStatusCard(vm)
+                metricsRow(vm)
+                if let insight = vm.latestInsight {
+                    insightCard(insight)
+                }
+            }
+            .padding()
+        }
+        .onAppear {
+            vm.refresh()
         }
     }
 
     // MARK: - Persona
 
-    private var personaHeader: some View {
-        let config = container.activeConfiguration
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(config.displayName)
+    private func personaHeader(_ vm: HomeViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(vm.personaDisplayName)
                 .font(.largeTitle.weight(.semibold))
-            Text(config.shortDescription)
+            Text(vm.personaDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -43,35 +60,33 @@ struct ContentView: View {
 
     // MARK: - Nexus status
 
-    private var nexusStatusCard: some View {
-        let state = container.nexus.state
-        return VStack(alignment: .leading, spacing: 12) {
+    private func nexusStatusCard(_ vm: HomeViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label("Nexus", systemImage: "antenna.radiowaves.left.and.right")
                     .font(.headline)
                 Spacer()
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(state.isActive ? .green : .secondary)
+                        .fill(vm.isNexusActive ? .green : .secondary)
                         .frame(width: 8, height: 8)
-                    Text(state.isActive ? "Active" : "Inactive")
+                    Text(vm.isNexusActive ? "Active" : "Inactive")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            // Overall health
             HStack {
                 Text("Overall health")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(state.overallHealthScore)")
+                Text("\(vm.overallHealthScore)")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(healthColor(state.overallHealthScore))
+                    .foregroundStyle(healthColor(vm.overallHealthScore))
             }
 
-            if state.lowPowerMode {
+            if vm.lowPowerMode {
                 Label("Low Power Mode", systemImage: "battery.25")
                     .font(.caption)
                     .foregroundStyle(.orange)
@@ -84,24 +99,23 @@ struct ContentView: View {
 
     // MARK: - Metrics
 
-    private var metricsRow: some View {
-        let state = container.nexus.state
-        return HStack(spacing: 12) {
+    private func metricsRow(_ vm: HomeViewModel) -> some View {
+        HStack(spacing: 12) {
             metricTile(
                 title: "Battery",
-                value: state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "—",
-                subtitle: state.batteryState,
+                value: vm.batteryLevelText,
+                subtitle: vm.batteryState,
                 systemImage: "battery.100"
             )
             metricTile(
                 title: "Network",
-                value: state.networkStatus.capitalized,
-                subtitle: state.isNetworkExpensive ? "Expensive" : (state.isNetworkConstrained ? "Constrained" : "OK"),
+                value: vm.networkStatus,
+                subtitle: vm.networkSubtitle,
                 systemImage: "wifi"
             )
             metricTile(
                 title: "Thermal",
-                value: state.thermalState.capitalized,
+                value: vm.thermalState,
                 subtitle: nil,
                 systemImage: "thermometer.medium"
             )

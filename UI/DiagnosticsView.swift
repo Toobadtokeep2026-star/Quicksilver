@@ -29,6 +29,8 @@ struct DiagnosticsView: View {
 
     @ViewBuilder
     private func content(_ vm: DiagnosticsViewModel) -> some View {
+        let personaID = container.activeConfiguration.id
+
         List {
             Section("Status") {
                 LabeledContent("Nexus", value: vm.isActive ? "Active" : "Inactive")
@@ -47,12 +49,18 @@ struct DiagnosticsView: View {
                     Text("No insights yet").foregroundStyle(.secondary)
                 } else {
                     ForEach(vm.insights) { insight in
+                        let display = InsightPresenter.present(insight, personaID: personaID)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(insight.title).font(.subheadline.weight(.medium))
-                            Text(insight.body).font(.caption).foregroundStyle(.secondary)
-                            Text(insight.personaStyle)
+                            Text(display.title).font(.subheadline.weight(.medium))
+                            Text(display.body).font(.caption).foregroundStyle(.secondary)
+                            Text(display.styleLabel)
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
+                            if let action = display.action {
+                                Text(action)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         .padding(.vertical, 2)
                     }

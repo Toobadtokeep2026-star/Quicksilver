@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload SPM logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spm-test-logs
           path: spm-test.log
@@ -232,7 +232,7 @@ jobs:
 
       - name: Upload build logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-simulator-build-logs
           path: |
@@ -243,7 +243,7 @@ jobs:
 
       - name: Upload generated project on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: generated-xcodeproj
           path: Quicksilver.xcodeproj

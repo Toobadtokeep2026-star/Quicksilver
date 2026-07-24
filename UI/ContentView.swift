@@ -52,12 +52,16 @@ struct ContentView: View {
                 nexusStatusCard(vm)
                 metricsRow(vm)
                 if let insight = vm.latestInsight {
-                    insightCard(insight)
+                    insightCard(insight, personaID: vm.activePersonaID)
                 }
             }
             .padding()
         }
         .onAppear { vm.refresh() }
+        // Light refresh when the view becomes active again
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            vm.refresh()
+        }
     }
 
     private func personaHeader(_ vm: HomeViewModel) -> some View {
@@ -127,16 +131,17 @@ struct ContentView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func insightCard(_ insight: Insight) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func insightCard(_ insight: Insight, personaID: String) -> some View {
+        let display = InsightPresenter.present(insight, personaID: personaID)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("Latest Insight", systemImage: "sparkles").font(.headline)
                 Spacer()
-                Text(insight.personaStyle).font(.caption).foregroundStyle(.secondary)
+                Text(display.styleLabel).font(.caption).foregroundStyle(.secondary)
             }
-            Text(insight.title).font(.subheadline.weight(.medium))
-            Text(insight.body).font(.caption).foregroundStyle(.secondary)
-            if let action = insight.suggestedAction {
+            Text(display.title).font(.subheadline.weight(.medium))
+            Text(display.body).font(.caption).foregroundStyle(.secondary)
+            if let action = display.action {
                 Text(action).font(.caption2).foregroundStyle(.tertiary)
             }
         }

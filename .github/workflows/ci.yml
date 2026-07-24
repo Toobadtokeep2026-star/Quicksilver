@@ -14,26 +14,50 @@ jobs:
 
       - name: Verify modular structure
         run: |
-          echo "Checking required Day One directories..."
-          test -d App || (echo "Missing App/" && exit 1)
-          test -d Core || (echo "Missing Core/" && exit 1)
-          test -d Personas || (echo "Missing Personas/" && exit 1)
-          test -d Nexus || (echo "Missing Nexus/" && exit 1)
-          test -d UI || (echo "Missing UI/" && exit 1)
-          test -d Tests || (echo "Missing Tests/" && exit 1)
+          set -e
+          echo "Checking required directories..."
+          for d in App Core Personas Nexus UI Memory Services Tests Documentation; do
+            test -d "$d" || (echo "Missing $d/" && exit 1)
+          done
+          test -d Core/Protocols || (echo "Missing Core/Protocols/" && exit 1)
+          test -d Core/Models || (echo "Missing Core/Models/" && exit 1)
           test -f Package.swift || (echo "Missing Package.swift" && exit 1)
           echo "Structure OK"
 
-      - name: Check for required source files
+      - name: Verify Core contracts
         run: |
+          set -e
+          test -f Core/Protocols/AIProvider.swift
+          test -f Core/Protocols/MemoryStore.swift
+          test -f Core/Protocols/DiagnosticProvider.swift
+          test -f Core/Protocols/PersonaEngine.swift
+          test -f Core/Protocols/AutomationProvider.swift
+          test -f Core/Models/AIRequest.swift
+          test -f Core/Models/AIResponse.swift
+          test -f Core/Models/MemoryItem.swift
+          echo "Core contracts present"
+
+      - name: Verify Memory foundation
+        run: |
+          set -e
+          test -f Memory/MemoryStore.swift
+          test -f Memory/SwiftDataMemoryStore.swift
+          test -f Memory/InMemoryMemoryStore.swift
+          test -f Memory/MemoryQuery.swift
+          test -f Memory/MemoryManager.swift
+          echo "Memory foundation present"
+
+      - name: Verify required source files
+        run: |
+          set -e
           test -f App/QuicksilverApp.swift
           test -f App/DependencyContainer.swift
-          test -f Core/AppConfiguration.swift
-          test -f Core/AppError.swift
-          test -f Personas/PersonaConfiguration.swift
           test -f Personas/PersonaManager.swift
+          test -f Personas/MemoryPolicy.swift
           test -f Nexus/NexusCoordinator.swift
+          test -f Nexus/PIPELINE.md
           test -f UI/ContentView.swift
+          test -f Documentation/ARCHITECTURE.md
           echo "Core files present"
 
   core-tests:
@@ -53,7 +77,7 @@ jobs:
       - name: Run SwiftLint (advisory)
         run: |
           if command -v swiftlint >/dev/null 2>&1; then
-            echo "=== SwiftLint report (non-blocking until debt is cleaned) ==="
+            echo "=== SwiftLint report (advisory) ==="
             swiftlint --reporter emoji || true
             echo "=== End SwiftLint report ==="
           else

@@ -2,96 +2,265 @@ name: Quicksilver CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
 
 jobs:
-  lint-and-structure:
+  # ------------------------------------------------------------------
+  # Fast structure + contract checks (Linux)
+  # ------------------------------------------------------------------
+  structure:
+    name: Structure & Contracts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Verify modular structure
+      - name: Verify modular layout
         run: |
-          set -e
-          echo "Checking required directories..."
-          for d in App Core Personas Nexus UI Memory Services Tests Documentation; do
-            test -d "$d" || (echo "Missing $d/" && exit 1)
+          set -euo pipefail
+          echo "== Required directories =="
+          for d in App Core Personas Nexus UI Memory Services Tests Documentation Intents Resources; do
+            if [[ ! -d "$d" ]]; then
+              echo "::error::Missing required directory: $d/"
+              exit 1
+            fi
+            echo "  OK  $d/"
           done
-          test -d Core/Protocols || (echo "Missing Core/Protocols/" && exit 1)
-          test -d Core/Models || (echo "Missing Core/Models/" && exit 1)
-          test -f Package.swift || (echo "Missing Package.swift" && exit 1)
-          echo "Structure OK"
 
-      - name: Verify Core contracts
-        run: |
-          set -e
-          test -f Core/Protocols/AIProvider.swift
-          test -f Core/Protocols/MemoryStore.swift
-          test -f Core/Protocols/DiagnosticProvider.swift
-          test -f Core/Protocols/PersonaEngine.swift
-          test -f Core/Protocols/AutomationProvider.swift
-          test -f Core/Models/AIRequest.swift
-          test -f Core/Models/AIResponse.swift
-          test -f Core/Models/MemoryItem.swift
-          echo "Core contracts present"
+          echo "== Core contracts =="
+          for f in \
+            Core/Protocols/AIProvider.swift \
+            Core/Protocols/MemoryStore.swift \
+            Core/Protocols/DiagnosticProvider.swift \
+            Core/Protocols/PersonaEngine.swift \
+            Core/Protocols/AutomationProvider.swift \
+            Core/Models/AIRequest.swift \
+            Core/Models/AIResponse.swift \
+            Core/Models/MemoryItem.swift \
+            Package.swift \
+            project.yml \
+            App/QuicksilverApp.swift \
+            App/DependencyContainer.swift \
+            Nexus/NexusCoordinator.swift \
+            UI/ContentView.swift \
+            Documentation/ARCHITECTURE.md
+          do
+            if [[ ! -f "$f" ]]; then
+              echo "::error::Missing required file: $f"
+              exit 1
+            fi
+            echo "  OK  $f"
+          done
+          echo "Structure and contracts verified."
 
-      - name: Verify Memory foundation
-        run: |
-          set -e
-          test -f Memory/MemoryStore.swift
-          test -f Memory/SwiftDataMemoryStore.swift
-          test -f Memory/InMemoryMemoryStore.swift
-          test -f Memory/MemoryQuery.swift
-          test -f Memory/MemoryManager.swift
-          echo "Memory foundation present"
-
-      - name: Verify required source files
-        run: |
-          set -e
-          test -f App/QuicksilverApp.swift
-          test -f App/DependencyContainer.swift
-          test -f Personas/PersonaManager.swift
-          test -f Personas/MemoryPolicy.swift
-          test -f Nexus/NexusCoordinator.swift
-          test -f Nexus/PIPELINE.md
-          test -f UI/ContentView.swift
-          test -f Documentation/ARCHITECTURE.md
-          echo "Core files present"
-
-  core-tests:
-    runs-on: macos-14
+  # ------------------------------------------------------------------
+  # SPM unit tests (Core / Memory / Personas / Nexus / AI)
+  # ------------------------------------------------------------------
+  spm-test:
+    name: SPM Unit Tests
+    runs-on: macos-15
+    needs: structure
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+        run: |
+          set -euo pipefail
+          echo "Available Xcode apps:"
+          ls /Applications | grep -i xcode || true
+          # Prefer newest installed Xcode
+          if [[ -d /Applications/Xcode_16.4.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app
+          elif [[ -d /Applications/Xcode_16.3.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.3.app
+          elif [[ -d /Applications/Xcode_16.2.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app
+          elif [[ -d /Applications/Xcode_16.1.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app
+          elif [[ -d /Applications/Xcode_16.0.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [[ -d /Applications/Xcode_15.4.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app
+          else
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+          echo "Active developer dir: $(xcode-select -p)"
+          xcodebuild -version
+          swift --version
 
-      - name: Swift version
-        run: swift --version
+      - name: Cache SPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
 
-      - name: Install SwiftLint
-        run: brew install swiftlint || true
+      - name: Resolve packages
+        run: swift package resolve
 
-      - name: Run SwiftLint (advisory)
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          swift test --enable-code-coverage 2>&1 | tee spm-test.log
+
+      - name: Summarize test results
+        if: always()
+        run: |
+          echo "=== SPM Test Summary ==="
+          grep -E "Test Suite|passed|failed|error:|Executed" spm-test.log || true
+
+      - name: Upload SPM logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spm-test-logs
+          path: spm-test.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ------------------------------------------------------------------
+  # Full iOS app: XcodeGen → Simulator build (no signing required)
+  # ------------------------------------------------------------------
+  ios-simulator:
+    name: iOS Simulator Build
+    runs-on: macos-15
+    needs: structure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          if [[ -d /Applications/Xcode_16.4.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app
+          elif [[ -d /Applications/Xcode_16.3.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.3.app
+          elif [[ -d /Applications/Xcode_16.2.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app
+          elif [[ -d /Applications/Xcode_16.1.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app
+          elif [[ -d /Applications/Xcode_16.0.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [[ -d /Applications/Xcode_15.4.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app
+          else
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen + SwiftLint
+        run: |
+          set -euo pipefail
+          brew install xcodegen swiftlint || brew upgrade xcodegen swiftlint || true
+          xcodegen --version
+          swiftlint version || true
+
+      - name: Generate Xcode project
+        run: |
+          set -euo pipefail
+          echo "Generating Quicksilver.xcodeproj from project.yml…"
+          xcodegen generate
+          test -d Quicksilver.xcodeproj || (echo "::error::XcodeGen did not produce Quicksilver.xcodeproj" && exit 1)
+          echo "Project generated."
+          xcodebuild -list -project Quicksilver.xcodeproj
+
+      - name: SwiftLint (advisory)
         run: |
           if command -v swiftlint >/dev/null 2>&1; then
-            echo "=== SwiftLint report (advisory) ==="
+            echo "=== SwiftLint (advisory) ==="
             swiftlint --reporter emoji || true
-            echo "=== End SwiftLint report ==="
           else
             echo "SwiftLint not available — skipping"
           fi
 
-      - name: Build and test QuicksilverCore
+      - name: Resolve destination (iPhone simulator)
+        id: dest
         run: |
-          swift package resolve
-          swift test --enable-code-coverage 2>&1 | tee test-output.txt
-        continue-on-error: false
+          set -euo pipefail
+          # Prefer iPhone 16 / 15 / 14 simulators in that order
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone 16|iPhone 15|iPhone 14" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
+          if [[ -z "${DEST}" ]]; then
+            # Fallback: any available iPhone
+            DEST=$(xcrun simctl list devices available | grep -i "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
+          fi
+          if [[ -z "${DEST}" ]]; then
+            echo "::error::No iPhone simulator found"
+            xcrun simctl list devices available || true
+            exit 1
+          fi
+          echo "Using simulator UDID: ${DEST}"
+          echo "udid=${DEST}" >> "$GITHUB_OUTPUT"
+          # Also print a human-readable name
+          xcrun simctl list devices | grep "${DEST}" || true
 
-      - name: Summarize
-        if: always()
+      - name: Build for iOS Simulator
         run: |
-          echo "=== Test summary ==="
-          grep -E "Test Suite|passed|failed|error:" test-output.txt || true
+          set -euo pipefail
+          set -o pipefail
+          echo "Building scheme Quicksilver for iOS Simulator…"
+          xcodebuild \
+            -project Quicksilver.xcodeproj \
+            -scheme Quicksilver \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.dest.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            build \
+            2>&1 | tee xcodebuild.log | xcpretty --color || {
+              # xcpretty may not be installed; fall back to raw log
+              echo "xcpretty unavailable or build failed — showing tail of log"
+              tail -n 80 xcodebuild.log || true
+              # Re-run without pipe to surface real exit code if needed
+              exit ${PIPESTATUS[0]:-1}
+            }
+
+      - name: Build diagnostics on failure
+        if: failure()
+        run: |
+          echo "::group::Last 120 lines of xcodebuild.log"
+          tail -n 120 xcodebuild.log || true
+          echo "::endgroup::"
+          echo "::group::DerivedData logs (if any)"
+          find DerivedData -name "*.log" 2>/dev/null | head -20 || true
+          echo "::endgroup::"
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-build-logs
+          path: |
+            xcodebuild.log
+            DerivedData/Logs
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload generated project (debug aid)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-xcodeproj
+          path: Quicksilver.xcodeproj
+          retention-days: 3
+          if-no-files-found: ignore

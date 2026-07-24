@@ -45,6 +45,9 @@ final class NexusCoordinator {
 
     var isActive: Bool { state.isActive }
 
+    /// Expose bridge for Intents / external callers that already hold a NexusCoordinator.
+    var bridge: AutomationBridge { automationBridge }
+
     func start() {
         guard !isRunning else { return }
         isRunning = true
@@ -54,7 +57,7 @@ final class NexusCoordinator {
         state = newState
 
         logger.info("Nexus starting", category: logger.nexus)
-        automationBridge.configure()
+        automationBridge.configure(nexus: self)
 
         networkMonitor.onChange = { [weak self] c, e, k in
             Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) }

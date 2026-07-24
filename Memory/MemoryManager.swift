@@ -27,7 +27,6 @@ final class MemoryManager {
     }
 
     /// Write or update a memory item.
-    /// When `importanceBoost` is nil, callers may supply a policy-driven hint via the same parameter.
     func set(
         key: String,
         value: String,
@@ -110,6 +109,29 @@ final class MemoryManager {
         } catch {
             logger.error("Failed to delete memory item: \(error.localizedDescription)", category: logger.memory)
         }
+    }
+
+    /// User-initiated full wipe. Irreversible.
+    func clearAll() async {
+        let ids = items.map(\.id)
+        for id in ids {
+            await delete(id: id)
+        }
+        items.removeAll()
+        logger.info("Memory cleared by user request", category: logger.memory)
+    }
+
+    /// Privacy-respecting export. Returns a JSON string of current items.
+    /// Callers are responsible for deciding whether and how to share the data.
+    func exportJSON() throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(items)
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw AppError.configurationMissing("Unable to encode memory export")
+        }
+        return json
     }
 
     private func persist(_ item: MemoryItem) async {

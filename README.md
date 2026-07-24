@@ -9,25 +9,25 @@ This establishes the clean native SwiftUI skeleton:
 - Modular source layout (`App`, `Core`, `Personas`, `Nexus`, `UI`, `Models`, `Services`, `Resources`, `Tests`)
 - Application entry point + dependency injection container
 - Configuration system + typed errors + OSLog facade
-- Persona protocol + three initial personas (Forge, Quicksilver, Eternal)
+- Persona **configuration** surface (data-driven) + three initial personas (Forge, Quicksilver, Eternal)
 - Nexus coordinator with SystemMonitor, NetworkMonitor (Network.framework), AutomationManager placeholders
 - Basic SwiftUI shell that surfaces active persona and Nexus status
+- Real Grok / xAI AIProvider (Keychain-backed, feature-flagged, Mock by default)
 - XCTest foundation for personas, configuration, and Nexus lifecycle
-- SwiftLint configuration
+- SwiftLint configuration (advisory in CI)
 - GitHub Actions structure check + **macOS `swift test` for core modules**
 - Updated architecture documentation
 - **Package.swift** exposing non-UI targets as `QuicksilverCore` library (Core / Memory / Personas / ServicesAI / Nexus)
+- **project.yml** for one-command Xcode project generation via xcodegen
 
-### What is intentionally missing
+### What is intentionally missing / deferred
 
-- Full `.xcodeproj` / `project.pbxproj` (generate with Xcode or xcodegen on a Mac)
+- Full generated `.xcodeproj` (run `xcodegen` on a Mac — see below)
 - Real Asset Catalog and color assets
-- App Intents / Shortcuts implementation
-- Full AI provider services beyond mock
 - Persistence layer beyond UserDefaultsMemoryStore
 - Background modes and entitlements
 
-These are deferred so Day One remains a stable, reviewable skeleton.
+These remain deferred so the foundation stays stable and reviewable.
 
 ## Getting Started
 
@@ -39,7 +39,17 @@ swift test
 
 Runs against the Package.swift targets on any machine with Swift 5.9+ (or via the macOS CI job).
 
-### Full app (Mac + Xcode required for now)
+### Full app (Mac + Xcode)
+
+**Preferred (xcodegen):**
+
+```bash
+brew install xcodegen
+xcodegen generate
+open Quicksilver.xcodeproj
+```
+
+**Manual fallback:**
 
 1. Create a new iOS App project in Xcode (SwiftUI, iOS 17.0+).
 2. Delete the default files.
@@ -48,7 +58,15 @@ Runs against the Package.swift targets on any machine with Swift 5.9+ (or via th
 5. Add the test files to a Unit Testing Bundle target.
 6. Build & run on iPhone 14 simulator or device.
 
-Alternatively, once an `xcodegen` or Tuist spec is added, regenerate the project from the source tree.
+## Enabling the real AI provider
+
+```swift
+// Once you have a key from the xAI console
+container.aiService.configureAPIKey("xai-...")
+container.featureFlags.set("aiServiceEnabled", enabled: true)
+```
+
+Default remains Mock + flag off — zero network, zero risk.
 
 ## Development Principles
 
@@ -69,7 +87,7 @@ See [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md).
 |-------------|-------------------------------------------|
 | Quicksilver | Primary adaptive intelligence             |
 | Forge       | Disciplined builder & structural focus    |
-| Eternal     | Continuity, memory, long-horizon thinking |
+| Eternal     | Continuity, memory, long-term coherence   |
 
 ## Nexus
 
@@ -79,7 +97,7 @@ Monitoring and automation hub. Currently:
 - `SystemMonitor` / `DeviceMetricsMonitor` — thermal / low-power
 - `NetworkMonitor` — live `NWPathMonitor`
 - `BatteryMonitor` / `StorageMonitor`
-- `AutomationManager` — App Intents / Shortcuts ready surface (throws until implemented)
+- `AutomationManager` — App Intents / Shortcuts ready surface
 - `InsightEngine` — persona-styled insights from signals
 
 ## License

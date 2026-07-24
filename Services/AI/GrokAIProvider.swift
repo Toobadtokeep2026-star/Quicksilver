@@ -33,6 +33,8 @@ struct GrokAIProvider: AIProvider {
     var isAvailable: Bool { !apiKey.isEmpty }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
+        try Task.checkCancellation()
+
         guard isAvailable else { throw AppError.apiKeyMissing }
 
         let endpoint = baseURL.appendingPathComponent("chat/completions")
@@ -40,7 +42,7 @@ struct GrokAIProvider: AIProvider {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        urlRequest.timeoutInterval = 60
+        urlRequest.timeoutInterval = 45
 
         var messages: [GrokAPI.ChatRequest.Message] = []
         if let system = request.systemPrompt, !system.isEmpty {
@@ -49,22 +51,43 @@ struct GrokAIProvider: AIProvider {
         messages.append(.init(role: "user", content: request.prompt))
 
         let body = GrokAPI.ChatRequest(
-            model: model, messages: messages,
-            temperature: request.temperature, max_tokens: request.maxTokens, stream: false
+            model: model,
+            messages: messages,
+            temperature: request.temperature,
+            max_tokens: request.maxTokens,
+            stream: false
         )
         urlRequest.httpBody = try encoder.encode(body)
 
-        let (data, response) = try await session.data(for: urlRequest)
-        guard let http = response as? HTTPURLResponse else { throw AppError.networkUnavailable }
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: urlRequest)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Never surface the raw error if it might contain request details
+            throw AppError.networkUnavailable
+        }
+
+        try Task.checkCancellation()
+
+        guard let http = response as? HTTPURLResponse else {
+            throw AppError.networkUnavailable
+        }
 
         guard (200...299).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw AppError.aiRequestFailed("Grok API error \(http.statusCode): \(message.prefix(200))")
+            // Truncate and never echo potential secrets
+            let snippet = String(data: data, encoding: .utf8).map { String($0.prefix(120)) } ?? "HTTP \(http.statusCode)"
+            throw AppError.aiRequestFailed("Grok API \(http.statusCode): \(snippet)")
         }
 
         let decoded: GrokAPI.ChatResponse
-        do { decoded = try decoder.decode(GrokAPI.ChatResponse.self, from: data) }
-        catch { throw AppError.aiRequestFailed("Failed to decode Grok response: \(error.localizedDescription)") }
+        do {
+            decoded = try decoder.decode(GrokAPI.ChatResponse.self, from: data)
+        } catch {
+            throw AppError.aiRequestFailed("Failed to decode Grok response")
+        }
 
         guard let first = decoded.choices.first else {
             throw AppError.aiRequestFailed("Grok response contained no choices")
@@ -80,6 +103,11 @@ struct GrokAIProvider: AIProvider {
             .init(promptTokens: $0.prompt_tokens ?? 0, completionTokens: $0.completion_tokens ?? 0)
         }
 
-        return AIResponse(requestID: request.id, content: first.message.content, finishReason: finishReason, usage: usage)
+        return AIResponse(
+            requestID: request.id,
+            content: first.message.content,
+            finishReason: finishReason,
+            usage: usage
+        )
     }
 }

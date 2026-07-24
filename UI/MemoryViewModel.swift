@@ -7,6 +7,8 @@ final class MemoryViewModel {
     private(set) var items: [MemoryItem] = []
     private(set) var isLoading = false
     private(set) var activePolicyLabel: String = ""
+    private(set) var lastExportJSON: String?
+    private(set) var statusMessage: String?
 
     private let container: DependencyContainer
 
@@ -26,7 +28,17 @@ final class MemoryViewModel {
             personaScope: policy.prefersScopedView ? personaID : nil,
             minimumImportance: policy.retentionThreshold
         )
+        // Apply decay at query time so the UI always reflects current importance
         items = container.memoryManager.items(matching: query, policy: policy)
+            .map { item in
+                var copy = item
+                copy.importance = MemoryScorer.decayedImportance(for: item)
+                return copy
+            }
+            .sorted {
+                if $0.importance != $1.importance { return $0.importance > $1.importance }
+                return $0.updatedAt > $1.updatedAt
+            }
         isLoading = false
     }
 
@@ -45,5 +57,27 @@ final class MemoryViewModel {
             personaScope: personaID
         )
         await load()
+    }
+
+    func delete(id: UUID) async {
+        await container.memoryManager.delete(id: id)
+        await load()
+        statusMessage = "Memory deleted"
+    }
+
+    func clearAll() async {
+        await container.memoryManager.clearAll()
+        await load()
+        statusMessage = "All memories cleared"
+    }
+
+    func prepareExport() {
+        do {
+            lastExportJSON = try container.memoryManager.exportJSON()
+            statusMessage = "Export ready"
+        } catch {
+            lastExportJSON = nil
+            statusMessage = "Export failed"
+        }
     }
 }

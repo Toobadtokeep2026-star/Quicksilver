@@ -47,6 +47,19 @@ jobs:
       - name: Swift version
         run: swift --version
 
+      - name: Install SwiftLint
+        run: brew install swiftlint || true
+
+      - name: Run SwiftLint
+        run: |
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint --strict --reporter github-actions-logging || true
+            # Fail the job only on real errors, keep warnings non-blocking for now
+            swiftlint --quiet --reporter emoji
+          else
+            echo "SwiftLint not available — skipping"
+          fi
+
       - name: Build and test QuicksilverCore
         run: |
           swift package resolve

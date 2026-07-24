@@ -68,7 +68,7 @@ final class AskViewModel {
         turns.append(userTurn)
         draft = ""
 
-        await persistTurn(userTurn, personaID: personaID, policy: policy)
+        await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
 
         await container.memoryManager.load()
         let memoryQuery = MemoryQuery(
@@ -76,7 +76,7 @@ final class AskViewModel {
             minimumImportance: policy.retentionThreshold,
             limit: 5
         )
-        let memories = container.memoryManager.items(matching: memoryQuery, policy: policy)
+        let memories = container.memoryManager.items(matching: memoryQuery, retentionThreshold: policy.retentionThreshold)
             .filter { $0.category != .conversation }
             .map { $0.value }
 
@@ -112,7 +112,7 @@ final class AskViewModel {
                 createdAt: Date()
             )
             turns.append(assistantTurn)
-            await persistTurn(assistantTurn, personaID: personaID, policy: policy)
+            await persistTurn(assistantTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -120,7 +120,7 @@ final class AskViewModel {
         isProcessing = false
     }
 
-    private func persistTurn(_ turn: ChatTurn, personaID: String, policy: MemoryPolicy) async {
+    private func persistTurn(_ turn: ChatTurn, personaID: String, writeHint: Double?) async {
         let key = "chat.\(turn.createdAt.timeIntervalSince1970).\(turn.id.uuidString.prefix(8))"
         await container.memoryManager.set(
             key: key,
@@ -130,7 +130,7 @@ final class AskViewModel {
                 "role": turn.role.rawValue,
                 "persona": personaID
             ],
-            importanceBoost: turn.role == .assistant ? policy.writeImportanceHint : 0.45,
+            importanceBoost: turn.role == .assistant ? writeHint : 0.45,
             personaScope: personaID
         )
     }

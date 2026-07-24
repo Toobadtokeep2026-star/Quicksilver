@@ -1,17 +1,37 @@
 import Foundation
 
 /// Data-driven configuration for a persona.
-struct PersonaConfiguration: Sendable, Codable, Equatable {
-    let id: String
-    let displayName: String
-    let shortDescription: String
-    let systemPrompt: String
-    let accentColorName: String
-    let traits: [String: String]
-    let preferredTemperature: Double
-    let maxTokensHint: Int
+public struct PersonaConfiguration: Sendable, Codable, Equatable {
+    public let id: String
+    public let displayName: String
+    public let shortDescription: String
+    public let systemPrompt: String
+    public let accentColorName: String
+    public let traits: [String: String]
+    public let preferredTemperature: Double
+    public let maxTokensHint: Int
 
-    static let forge = PersonaConfiguration(
+    public init(
+        id: String,
+        displayName: String,
+        shortDescription: String,
+        systemPrompt: String,
+        accentColorName: String,
+        traits: [String: String],
+        preferredTemperature: Double,
+        maxTokensHint: Int
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.shortDescription = shortDescription
+        self.systemPrompt = systemPrompt
+        self.accentColorName = accentColorName
+        self.traits = traits
+        self.preferredTemperature = preferredTemperature
+        self.maxTokensHint = maxTokensHint
+    }
+
+    public static let forge = PersonaConfiguration(
         id: "forge",
         displayName: "Forge",
         shortDescription: "Disciplined builder. Precision over speed.",
@@ -28,7 +48,7 @@ struct PersonaConfiguration: Sendable, Codable, Equatable {
         maxTokensHint: 1024
     )
 
-    static let quicksilver = PersonaConfiguration(
+    public static let quicksilver = PersonaConfiguration(
         id: "quicksilver",
         displayName: "Quicksilver",
         shortDescription: "Adaptive intelligence. Elegant chaos under discipline.",
@@ -46,7 +66,7 @@ struct PersonaConfiguration: Sendable, Codable, Equatable {
         maxTokensHint: 1536
     )
 
-    static let eternal = PersonaConfiguration(
+    public static let eternal = PersonaConfiguration(
         id: "eternal",
         displayName: "Eternal",
         shortDescription: "Continuity guardian. Memory and long-term coherence.",
@@ -63,5 +83,5 @@ struct PersonaConfiguration: Sendable, Codable, Equatable {
         maxTokensHint: 2048
     )
 
-    static let all: [PersonaConfiguration] = [.forge, .quicksilver, .eternal]
+    public static let all: [PersonaConfiguration] = [.forge, .quicksilver, .eternal]
 }

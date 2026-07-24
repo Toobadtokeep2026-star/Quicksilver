@@ -49,14 +49,26 @@ final class NexusCoordinator {
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        state.isActive = true
+
+        var newState = state
+        newState.isActive = true
+        state = newState
+
         logger.info("Nexus starting", category: logger.nexus)
         automationBridge.configure()
 
-        networkMonitor.onChange = { [weak self] c, e, k in Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) } }
-        batteryMonitor.onChange = { [weak self] l, d in Task { @MainActor in self?.handleBattery(level: l, description: d) } }
-        storageMonitor.onChange = { [weak self] a, t in Task { @MainActor in self?.handleStorage(available: a, total: t) } }
-        deviceMonitor.onChange = { [weak self] t, lp in Task { @MainActor in self?.handleDevice(thermal: t, lowPower: lp) } }
+        networkMonitor.onChange = { [weak self] c, e, k in
+            Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) }
+        }
+        batteryMonitor.onChange = { [weak self] l, d in
+            Task { @MainActor in self?.handleBattery(level: l, description: d) }
+        }
+        storageMonitor.onChange = { [weak self] a, t in
+            Task { @MainActor in self?.handleStorage(available: a, total: t) }
+        }
+        deviceMonitor.onChange = { [weak self] t, lp in
+            Task { @MainActor in self?.handleDevice(thermal: t, lowPower: lp) }
+        }
 
         networkMonitor.start()
         batteryMonitor.start()
@@ -71,7 +83,11 @@ final class NexusCoordinator {
     func stop() {
         guard isRunning else { return }
         isRunning = false
-        state.isActive = false
+
+        var newState = state
+        newState.isActive = false
+        state = newState
+
         networkMonitor.stop()
         batteryMonitor.stop()
         storageMonitor.stop()
@@ -86,7 +102,11 @@ final class NexusCoordinator {
     // MARK: - Monitor handlers → pipeline
 
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {
-        let signal = processor.networkSignal(isConnected: connected, isExpensive: expensive, isConstrained: constrained)
+        let signal = processor.networkSignal(
+            isConnected: connected,
+            isExpensive: expensive,
+            isConstrained: constrained
+        )
         pipeline.ingest(signal)
         updateLocalState(from: signal, expensive: expensive, constrained: constrained)
     }
@@ -100,13 +120,15 @@ final class NexusCoordinator {
     private func handleStorage(available: Double, total: Double) {
         let signal = processor.storageSignal(availableGB: available, totalGB: total)
         pipeline.ingest(signal)
-        state.availableStorageGB = available
-        state.totalStorageGB = total
+
+        var newState = state
+        newState.availableStorageGB = available
+        newState.totalStorageGB = total
+        state = newState
     }
 
     private func handleDevice(thermal: String, lowPower: Bool) {
         var signal = processor.deviceSignal(thermal: thermal, lowPower: lowPower)
-        // Ensure metadata carries low-power for the pipeline mapping
         if lowPower {
             signal = Signal(
                 id: signal.id,
@@ -120,34 +142,39 @@ final class NexusCoordinator {
             )
         }
         pipeline.ingest(signal)
-        state.thermalState = thermal
-        state.lowPowerMode = lowPower
+
+        var newState = state
+        newState.thermalState = thermal
+        newState.lowPowerMode = lowPower
+        state = newState
     }
 
     // MARK: - Local state + insights
 
     private func updateLocalState(from signal: Signal, expensive: Bool = false, constrained: Bool = false) {
-        state.appendSignal(signal)
+        var newState = state
+        newState.appendSignal(signal)
 
         switch signal.source {
         case .network:
-            state.networkStatus = signal.value
-            state.isNetworkExpensive = expensive
-            state.isNetworkConstrained = constrained
-            state.networkHealthScore = signal.value != "disconnected"
+            newState.networkStatus = signal.value
+            newState.isNetworkExpensive = expensive
+            newState.isNetworkConstrained = constrained
+            newState.networkHealthScore = signal.value != "disconnected"
                 ? (constrained || expensive ? 70 : 95)
                 : 20
         case .battery:
             if let level = signal.numericValue, level >= 0 {
-                state.batteryLevel = level
-                state.powerHealthScore = Int(level * 100)
+                newState.batteryLevel = level
+                newState.powerHealthScore = Int(level * 100)
             }
-            state.batteryState = signal.value
+            newState.batteryState = signal.value
         default:
             break
         }
 
-        recalculateOverallHealth()
+        let scores = [newState.networkHealthScore, newState.powerHealthScore]
+        newState.overallHealthScore = scores.reduce(0, +) / max(scores.count, 1)
 
         let event = DiagnosticEvent(
             signalID: signal.id,
@@ -156,17 +183,19 @@ final class NexusCoordinator {
             severity: .info,
             source: signal.source
         )
-        state.appendEvent(event)
+        newState.appendEvent(event)
 
-        if let insight = insightEngine.insight(for: signal, recent: state.recentSignals, personaID: currentPersonaID) {
-            state.appendInsight(insight)
+        if let insight = insightEngine.insight(
+            for: signal,
+            recent: newState.recentSignals,
+            personaID: currentPersonaID
+        ) {
+            newState.appendInsight(insight)
             logger.info("Insight: \(insight.title)", category: logger.nexus)
         }
-    }
 
-    private func recalculateOverallHealth() {
-        let scores = [state.networkHealthScore, state.powerHealthScore]
-        state.overallHealthScore = scores.reduce(0, +) / max(scores.count, 1)
+        // Full reassignment so Observation tracks the change reliably
+        state = newState
     }
 
     private func publishCurrentTimeContext() async {

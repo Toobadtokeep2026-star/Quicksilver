@@ -78,7 +78,6 @@ public struct CaptureMemoryIntent: AppIntent {
         let personaID = manager.activeConfiguration.id
         let policy = manager.activeMemoryPolicy
 
-        // Update task context so autonomous policy can react if needed
         manager.updateTaskContext(
             description: "Capture memory: \(String(truncated.prefix(80)))",
             kind: .reflecting,
@@ -86,7 +85,6 @@ public struct CaptureMemoryIntent: AppIntent {
             memoryHints: [String(truncated.prefix(120))]
         )
 
-        // Persist for real
         await memory.set(
             key: "note.intent.\(UUID().uuidString.prefix(8))",
             value: truncated,
@@ -125,6 +123,26 @@ public struct GetContextIntent: AppIntent {
     }
 }
 
+// MARK: - Report Status (uses AutomationBridge)
+
+@available(iOS 17.0, macOS 14.0, *)
+public struct ReportStatusIntent: AppIntent {
+    public static var title: LocalizedStringResource = "Report Quicksilver Status"
+    public static var description = IntentDescription("Full diagnostic report from Nexus (network, battery, health).")
+    public static var openAppWhenRun: Bool = false
+
+    public init() {}
+
+    @MainActor
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        guard let nexus = IntentDependencies.shared.nexusCoordinator else {
+            throw AppError.nexusNotReady
+        }
+        let report = try nexus.bridge.triggerDiagnostic(named: "full")
+        return .result(value: report)
+    }
+}
+
 // MARK: - Query Nexus (wired to AIService)
 
 @available(iOS 17.0, macOS 14.0, *)
@@ -148,7 +166,6 @@ public struct QueryNexusIntent: AppIntent {
             throw AppError.nexusNotReady
         }
 
-        // 1. Infer task context so the autonomous policy can switch if needed
         let lower = query.lowercased()
         let intent: QueryIntent
         let kind: TaskKind
@@ -176,7 +193,6 @@ public struct QueryNexusIntent: AppIntent {
             queryIntent: intent
         )
 
-        // 2. Use the (possibly newly selected) persona’s system prompt + temperature
         let config = manager.activeConfiguration
         let response = try await ai.complete(
             prompt: query,
@@ -215,6 +231,15 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Context",
             systemImageName: "info.circle"
+        )
+        AppShortcut(
+            intent: ReportStatusIntent(),
+            phrases: [
+                "Report Quicksilver status",
+                "Full diagnostics from \(.applicationName)"
+            ],
+            shortTitle: "Full Status",
+            systemImageName: "waveform.path.ecg"
         )
         AppShortcut(
             intent: CaptureMemoryIntent(content: ""),

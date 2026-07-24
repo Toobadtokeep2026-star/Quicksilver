@@ -13,25 +13,114 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: targeted
 
 targets:
+
+  # ---- Modules (match Package.swift) ----
+
+  Core:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.core
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  Memory:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Memory
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.memory
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  Personas:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Personas
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.personas
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  ServicesAI:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Services/AI
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.servicesai
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  Nexus:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Nexus
+        excludes:
+          - "*.md"
+    dependencies:
+      - target: Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.nexus
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  QuicksilverIntents:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Intents
+    dependencies:
+      - target: Core
+      - target: Personas
+      - target: Nexus
+      - target: Memory
+      - target: ServicesAI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.intents
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  # ---- App ----
+
   Quicksilver:
     type: application
     platform: iOS
     sources:
       - path: App
       - path: UI
-      - path: Core
-      - path: Personas
-      - path: Memory
-      - path: Nexus
-      - path: Services/AI
-      - path: Intents
       - path: Models
         optional: true
     resources:
       - path: Resources
         optional: true
+    dependencies:
+      - target: Core
+      - target: Memory
+      - target: Personas
+      - target: ServicesAI
+      - target: Nexus
+      - target: QuicksilverIntents
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
@@ -41,8 +130,6 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
-        SWIFT_STRICT_CONCURRENCY: targeted
-    dependencies: []
 
   QuicksilverTests:
     type: bundle.unit-test
@@ -51,6 +138,12 @@ targets:
       - path: Tests
     dependencies:
       - target: Quicksilver
+      - target: Core
+      - target: Memory
+      - target: Personas
+      - target: ServicesAI
+      - target: Nexus
+      - target: QuicksilverIntents
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -59,6 +152,12 @@ schemes:
   Quicksilver:
     build:
       targets:
+        Core: all
+        Memory: all
+        Personas: all
+        ServicesAI: all
+        Nexus: all
+        QuicksilverIntents: all
         Quicksilver: all
         QuicksilverTests: [test]
     test:

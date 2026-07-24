@@ -4,8 +4,8 @@ import Core
 
 @MainActor
 @Observable
-final class NexusCoordinator {
-    private(set) var state = NexusState()
+public final class NexusCoordinator {
+    public private(set) var state = NexusState()
 
     private let networkMonitor: NetworkMonitoring
     private let batteryMonitor: BatteryMonitoring
@@ -20,7 +20,7 @@ final class NexusCoordinator {
     private var currentPersonaID: String = "quicksilver"
     private var isRunning = false
 
-    init(
+    public init(
         networkMonitor: NetworkMonitoring = NetworkMonitor(),
         batteryMonitor: BatteryMonitoring = BatteryMonitor(),
         storageMonitor: StorageMonitoring = StorageMonitor(),
@@ -43,12 +43,10 @@ final class NexusCoordinator {
         self.pipeline = SignalPipeline(eventBus: eventBus, logger: logger)
     }
 
-    var isActive: Bool { state.isActive }
+    public var isActive: Bool { state.isActive }
+    public var bridge: AutomationBridge { automationBridge }
 
-    /// Expose bridge for Intents / external callers that already hold a NexusCoordinator.
-    var bridge: AutomationBridge { automationBridge }
-
-    func start() {
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
 
@@ -80,7 +78,7 @@ final class NexusCoordinator {
         Task { await publishCurrentTimeContext() }
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         isRunning = false
 
@@ -95,7 +93,7 @@ final class NexusCoordinator {
         logger.info("Nexus stopped", category: logger.nexus)
     }
 
-    func updatePersonaContext(_ personaID: String) {
+    public func updatePersonaContext(_ personaID: String) {
         currentPersonaID = personaID
     }
 

@@ -1,4 +1,7 @@
 import SwiftUI
+import Core
+import Personas
+import Nexus
 
 struct ContentView: View {
     @Environment(DependencyContainer.self) private var container
@@ -18,24 +21,16 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    NavigationLink {
-                        AskView()
-                    } label: {
+                    NavigationLink { AskView() } label: {
                         Label("Ask", systemImage: "text.bubble")
                     }
-                    NavigationLink {
-                        DiagnosticsView()
-                    } label: {
+                    NavigationLink { DiagnosticsView() } label: {
                         Label("Diagnostics", systemImage: "waveform.path.ecg")
                     }
-                    NavigationLink {
-                        MemoryView()
-                    } label: {
+                    NavigationLink { MemoryView() } label: {
                         Label("Memory", systemImage: "brain.head.profile")
                     }
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
+                    NavigationLink { SettingsView() } label: {
                         Label("Settings", systemImage: "gearshape")
                     }
                 }
@@ -58,7 +53,6 @@ struct ContentView: View {
             .padding()
         }
         .onAppear { vm.refresh() }
-        // Light refresh when the view becomes active again
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             vm.refresh()
         }
@@ -157,8 +151,4 @@ struct ContentView: View {
         default: return .red
         }
     }
-}
-
-#Preview {
-    ContentView().environment(DependencyContainer())
 }

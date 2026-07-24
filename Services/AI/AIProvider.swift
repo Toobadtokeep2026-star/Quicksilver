@@ -1,20 +1,24 @@
 import Foundation
+import Core
 
-protocol AIProvider: Sendable {
-    var id: String { get }
-    var displayName: String { get }
-    var isAvailable: Bool { get }
-    func complete(_ request: AIRequest) async throws -> AIResponse
-}
+// AIProvider protocol now lives in Core/Protocols/AIProvider.swift.
+// This file only provides the Mock implementation used by default.
 
-struct MockAIProvider: AIProvider {
-    let id = "mock"
-    let displayName = "Mock Provider"
-    let isAvailable = true
+public struct MockAIProvider: AIProvider {
+    public let id = "mock"
+    public let displayName = "Mock Provider"
+    public let isAvailable = true
 
-    func complete(_ request: AIRequest) async throws -> AIResponse {
+    public init() {}
+
+    public func complete(_ request: AIRequest) async throws -> AIResponse {
         try await Task.sleep(nanoseconds: 80_000_000)
         let content = "[Mock response]\nPrompt: \(request.prompt.prefix(80))...\nSystem: \(request.systemPrompt?.prefix(40) ?? "none")"
-        return AIResponse(requestID: request.id, content: content, finishReason: .stop, usage: .init(promptTokens: 42, completionTokens: 28))
+        return AIResponse(
+            requestID: request.id,
+            content: content,
+            finishReason: .stop,
+            usage: .init(promptTokens: 42, completionTokens: 28)
+        )
     }
 }

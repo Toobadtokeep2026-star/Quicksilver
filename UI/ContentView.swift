@@ -24,10 +24,11 @@ struct ContentView: View {
     }
 
     private var personaHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(container.activePersona.name)
+        let config = container.activeConfiguration
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(config.displayName)
                 .font(.largeTitle.weight(.semibold))
-            Text(container.activePersona.shortDescription)
+            Text(config.shortDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

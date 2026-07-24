@@ -30,8 +30,8 @@ jobs:
           test -f App/DependencyContainer.swift
           test -f Core/AppConfiguration.swift
           test -f Core/AppError.swift
-          test -f Personas/PersonaProtocol.swift
-          test -f Personas/QuicksilverPersona.swift
+          test -f Personas/PersonaConfiguration.swift
+          test -f Personas/PersonaManager.swift
           test -f Nexus/NexusCoordinator.swift
           test -f UI/ContentView.swift
           echo "Core files present"

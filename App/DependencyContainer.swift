@@ -48,19 +48,19 @@ final class DependencyContainer {
         }
     }
 
-    var activePersona: any Persona {
-        switch personaManager.activeConfiguration.id {
-        case "forge": return ForgePersona()
-        case "eternal": return EternalPersona()
-        default: return QuicksilverPersona()
+    /// Current active configuration — single source of truth.
+    var activeConfiguration: PersonaConfiguration {
+        personaManager.activeConfiguration
+    }
+
+    func switchPersona(to id: String) {
+        Task {
+            try? await personaManager.switchTo(id: id)
+            nexus.updatePersonaContext(id)
         }
     }
 
-    func switchPersona(to persona: any Persona) {
-        Task {
-            try? await personaManager.switchTo(id: persona.id)
-            nexus.updatePersonaContext(persona.id)
-            // No manual objectWillChange needed — @Observable tracks the graph
-        }
+    func switchPersona(to config: PersonaConfiguration) {
+        switchPersona(to: config.id)
     }
 }

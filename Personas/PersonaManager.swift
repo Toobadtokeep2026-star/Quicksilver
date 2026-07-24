@@ -3,10 +3,10 @@ import Observation
 import Core
 
 /// Owns persona lifecycle and switching.
-/// Supports both explicit (override) and autonomous switching driven by context.
+/// Conforms to Core.PersonaEngine so other modules depend only on the contract.
 @MainActor
 @Observable
-final class PersonaManager {
+final class PersonaManager: PersonaEngine {
     private(set) var state: PersonaState
 
     private let eventBus: EventBus
@@ -14,14 +14,12 @@ final class PersonaManager {
     private let available: [PersonaConfiguration]
     private let policy: PersonaDecisionPolicy
 
-    // Latest observed context fragments
     private var latestFocusName: String?
     private var latestTimePeriod: EventBus.TimePeriod?
     private var latestBatteryLevel: Double?
     private var latestIsLowPower: Bool = false
     private var latestThermalState: String?
 
-    // Richer task/intent context (set by callers or future AI layer)
     private var latestTaskDescription: String?
     private var latestTaskKind: TaskKind?
     private var latestQueryIntent: QueryIntent?
@@ -54,13 +52,15 @@ final class PersonaManager {
 
     deinit {
         if let id = subscriptionID {
-            Task {
-                await eventBus.unsubscribe(id)
-            }
+            Task { await eventBus.unsubscribe(id) }
         }
     }
 
-    // MARK: - Public API
+    // MARK: - PersonaEngine
+
+    var activePersonaID: String {
+        state.configuration.id
+    }
 
     var activeConfiguration: PersonaConfiguration {
         state.configuration
@@ -70,7 +70,11 @@ final class PersonaManager {
         available
     }
 
-    /// Explicit override – always wins over autonomous policy.
+    /// Memory policy for the currently active persona.
+    var activeMemoryPolicy: MemoryPolicy {
+        MemoryPolicy.policy(for: activePersonaID)
+    }
+
     func switchTo(id: String) async throws {
         guard let config = available.first(where: { $0.id == id }) else {
             throw AppError.personaUnavailable(id)
@@ -86,8 +90,6 @@ final class PersonaManager {
         state.recordInteraction()
     }
 
-    /// Inject richer task / intent context so the policy can decide based on
-    /// what is actually needed rather than only ambient signals.
     func updateTaskContext(
         description: String? = nil,
         kind: TaskKind? = nil,
@@ -108,20 +110,16 @@ final class PersonaManager {
         case .focusDidChange(let name):
             latestFocusName = name
             evaluateAutonomy(reason: "focus changed")
-
         case .timeContextDidChange(let period):
             latestTimePeriod = period
             evaluateAutonomy(reason: "time context changed")
-
         case .batteryPressureChanged(let level, let isLowPower):
             latestBatteryLevel = level
             latestIsLowPower = isLowPower
             evaluateAutonomy(reason: "battery pressure")
-
         case .thermalPressureChanged(let thermal):
             latestThermalState = thermal
             evaluateAutonomy(reason: "thermal pressure")
-
         default:
             break
         }
@@ -145,9 +143,7 @@ final class PersonaManager {
             current: state.configuration,
             lastSwitchedAt: state.lastSwitchedAt,
             context: context
-        ) else {
-            return
-        }
+        ) else { return }
 
         Task {
             try? await performSwitch(to: preferred, reason: "autonomous (\(reason))")

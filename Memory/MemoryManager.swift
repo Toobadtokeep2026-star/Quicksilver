@@ -82,18 +82,18 @@ public final class MemoryManager {
         }
     }
 
-    public func items(matching query: MemoryQuery, policy: MemoryPolicy? = nil) -> [MemoryItem] {
+    /// Policy-aware query. Callers pass retention threshold explicitly so Memory
+    /// does not depend on the Personas module.
+    public func items(matching query: MemoryQuery, retentionThreshold: Double? = nil) -> [MemoryItem] {
         var effective = query
-        if let policy {
-            if effective.minimumImportance == nil {
-                effective = MemoryQuery(
-                    category: query.category,
-                    personaScope: query.personaScope,
-                    minimumImportance: policy.retentionThreshold,
-                    keyPrefix: query.keyPrefix,
-                    limit: query.limit
-                )
-            }
+        if let retentionThreshold, effective.minimumImportance == nil {
+            effective = MemoryQuery(
+                category: query.category,
+                personaScope: query.personaScope,
+                minimumImportance: retentionThreshold,
+                keyPrefix: query.keyPrefix,
+                limit: query.limit
+            )
         }
         return effective.apply(to: items)
     }

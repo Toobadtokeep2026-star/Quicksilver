@@ -22,6 +22,9 @@ struct DiagnosticsView: View {
                 }
             }
         }
+        .onDisappear {
+            viewModel?.stopLiveRefresh()
+        }
     }
 
     @ViewBuilder
@@ -36,6 +39,7 @@ struct DiagnosticsView: View {
                 if vm.lowPower {
                     LabeledContent("Power", value: "Low Power Mode")
                 }
+                LabeledContent("Last refresh", value: vm.lastRefresh.formatted(date: .omitted, time: .standard))
             }
 
             Section("Insights") {
@@ -76,6 +80,9 @@ struct DiagnosticsView: View {
                 }
             }
         }
-        .onAppear { vm.refresh() }
+        .onAppear {
+            vm.refresh()
+            vm.startLiveRefresh()
+        }
     }
 }

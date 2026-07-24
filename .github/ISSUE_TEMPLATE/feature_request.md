@@ -1,16 +1,27 @@
 ---
 name: Feature request
-about: Propose a Quicksilver improvement
+about: Suggest a vertical slice or improvement
+title: "[feature] "
+labels: enhancement
+assignees: ''
 ---
 
-## Feature
+## Problem / opportunity
 
-Describe the capability.
+## Proposed solution
 
-## Problem
+## Module home
 
-What problem does this solve?
+Which layer owns this?
 
-## Implementation notes
+- [ ] Core
+- [ ] Nexus
+- [ ] Memory
+- [ ] Personas
+- [ ] Services/AI
+- [ ] UI
+- [ ] Intents
 
-Optional technical details.
+## Out of scope
+
+## Success criteria

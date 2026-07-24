@@ -4,10 +4,15 @@ import Core
 import UIKit
 #endif
 
+/// Battery perception using only public UIDevice APIs.
+/// Token-based observers for clean lifecycle management.
 final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
     var diagnosticID: String { "battery" }
 
     private var isRunning = false
+    private var levelToken: NSObjectProtocol?
+    private var stateToken: NSObjectProtocol?
+
     private(set) var level: Double = -1
     private(set) var stateDescription: String = "unknown"
     var onChange: ((Double, String) -> Void)?
@@ -15,10 +20,22 @@ final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
     func start() {
         guard !isRunning else { return }
         isRunning = true
+
         #if canImport(UIKit)
         UIDevice.current.isBatteryMonitoringEnabled = true
-        NotificationCenter.default.addObserver(self, selector: #selector(batteryChanged), name: UIDevice.batteryLevelDidChangeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(batteryChanged), name: UIDevice.batteryStateDidChangeNotification, object: nil)
+
+        levelToken = NotificationCenter.default.addObserver(
+            forName: UIDevice.batteryLevelDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in self?.update() }
+
+        stateToken = NotificationCenter.default.addObserver(
+            forName: UIDevice.batteryStateDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in self?.update() }
+
         update()
         #endif
     }
@@ -26,17 +43,25 @@ final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
     func stop() {
         guard isRunning else { return }
         isRunning = false
+
         #if canImport(UIKit)
+        if let levelToken {
+            NotificationCenter.default.removeObserver(levelToken)
+            self.levelToken = nil
+        }
+        if let stateToken {
+            NotificationCenter.default.removeObserver(stateToken)
+            self.stateToken = nil
+        }
         UIDevice.current.isBatteryMonitoringEnabled = false
-        NotificationCenter.default.removeObserver(self)
         #endif
     }
 
-    deinit { stop() }
+    deinit {
+        stop()
+    }
 
     #if canImport(UIKit)
-    @objc private func batteryChanged() { update() }
-
     private func update() {
         let device = UIDevice.current
         level = Double(device.batteryLevel)
@@ -44,7 +69,7 @@ final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
         case .charging: stateDescription = "charging"
         case .full: stateDescription = "full"
         case .unplugged: stateDescription = "unplugged"
-        default: stateDescription = "unknown"
+        @unknown default: stateDescription = "unknown"
         }
         onChange?(level, stateDescription)
     }

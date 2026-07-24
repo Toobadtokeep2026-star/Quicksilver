@@ -1,15 +1,15 @@
 import SwiftUI
 
 /// Quicksilver application entry point.
-/// Day One: Minimal shell with dependency injection and environment object injection.
+/// Day One: Minimal shell with dependency injection and environment injection.
 @main
 struct QuicksilverApp: App {
-    @StateObject private var container = DependencyContainer()
+    @State private var container = DependencyContainer()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(container)
+                .environment(container)
                 .preferredColorScheme(.dark) // Aligns with Quicksilver's intelligent, slightly chaotic aesthetic while remaining HIG-compliant
         }
     }

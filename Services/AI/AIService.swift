@@ -1,11 +1,12 @@
 import Foundation
-import Combine
+import Observation
 import Core
 
 @MainActor
-final class AIService: ObservableObject {
-    @Published private(set) var isProcessing = false
-    @Published private(set) var lastResponse: AIResponse?
+@Observable
+final class AIService {
+    private(set) var isProcessing = false
+    private(set) var lastResponse: AIResponse?
 
     private var provider: AIProvider
     private let eventBus: EventBus

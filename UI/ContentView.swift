@@ -4,7 +4,7 @@ import SwiftUI
 /// Day One: simple shell that surfaces the active persona and Nexus status.
 /// Follows HIG: clear hierarchy, readable typography, sufficient contrast, no decorative noise.
 struct ContentView: View {
-    @EnvironmentObject private var container: DependencyContainer
+    @Environment(DependencyContainer.self) private var container
 
     var body: some View {
         NavigationStack {
@@ -67,5 +67,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(DependencyContainer())
+        .environment(DependencyContainer())
 }

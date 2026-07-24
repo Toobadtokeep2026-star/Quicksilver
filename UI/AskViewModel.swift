@@ -1,5 +1,10 @@
 import Foundation
 import Observation
+import Core
+import Memory
+import Personas
+import ServicesAI
+import Nexus
 
 struct ChatTurn: Identifiable, Equatable {
     let id: UUID
@@ -38,7 +43,6 @@ final class AskViewModel {
             keyPrefix: "chat.",
             limit: historyLimit
         )
-        // MemoryQuery sorts by importance then recency; for chat we want chronological
         let items = container.memoryManager.items(matching: query)
             .sorted { $0.createdAt < $1.createdAt }
 
@@ -60,7 +64,6 @@ final class AskViewModel {
         let policy = container.personaManager.activeMemoryPolicy
         let personaID = config.id
 
-        // Optimistic user turn
         let userTurn = ChatTurn(id: UUID(), role: .user, text: text, createdAt: Date())
         turns.append(userTurn)
         draft = ""

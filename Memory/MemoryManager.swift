@@ -27,9 +27,7 @@ final class MemoryManager {
     }
 
     /// Write or update a memory item.
-    /// - Parameters:
-    ///   - importanceBoost: Optional explicit importance (0...1). Overrides heuristic when provided.
-    ///   - personaScope: Optional persona id that primarily owns this memory.
+    /// When `importanceBoost` is nil, callers may supply a policy-driven hint via the same parameter.
     func set(
         key: String,
         value: String,
@@ -73,7 +71,7 @@ final class MemoryManager {
         items.first { $0.key == key && $0.category == category }?.value
     }
 
-    /// Items visible to a given persona (shared + scoped to that persona), sorted by importance then recency.
+    /// Items visible to a given persona (shared + scoped), sorted by importance then recency.
     func items(forPersona personaID: String?) -> [MemoryItem] {
         let filtered: [MemoryItem]
         if let personaID {
@@ -85,6 +83,23 @@ final class MemoryManager {
             if $0.importance != $1.importance { return $0.importance > $1.importance }
             return $0.updatedAt > $1.updatedAt
         }
+    }
+
+    /// Policy-aware query: applies persona scope preference + retention threshold.
+    func items(matching query: MemoryQuery, policy: MemoryPolicy? = nil) -> [MemoryItem] {
+        var effective = query
+        if let policy {
+            if effective.minimumImportance == nil {
+                effective = MemoryQuery(
+                    category: query.category,
+                    personaScope: query.personaScope,
+                    minimumImportance: policy.retentionThreshold,
+                    keyPrefix: query.keyPrefix,
+                    limit: query.limit
+                )
+            }
+        }
+        return effective.apply(to: items)
     }
 
     func delete(id: UUID) async {

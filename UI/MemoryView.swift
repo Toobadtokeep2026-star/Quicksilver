@@ -32,13 +32,18 @@ struct MemoryView: View {
                     }
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+            } header: {
+                if !vm.activePolicyLabel.isEmpty {
+                    Text("Policy: \(vm.activePolicyLabel)")
+                }
             }
 
             Section("Stored (by importance)") {
                 if vm.isLoading {
                     ProgressView()
                 } else if vm.items.isEmpty {
-                    Text("No memories yet").foregroundStyle(.secondary)
+                    Text("No memories match current policy")
+                        .foregroundStyle(.secondary)
                 } else {
                     ForEach(vm.items) { item in
                         VStack(alignment: .leading, spacing: 4) {

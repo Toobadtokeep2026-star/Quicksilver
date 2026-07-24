@@ -17,7 +17,12 @@ struct ContentView: View {
             .navigationTitle("Quicksilver")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink {
+                        DiagnosticsView()
+                    } label: {
+                        Label("Diagnostics", systemImage: "waveform.path.ecg")
+                    }
                     NavigationLink {
                         MemoryView()
                     } label: {

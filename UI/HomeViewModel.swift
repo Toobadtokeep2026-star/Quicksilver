@@ -3,7 +3,6 @@ import Observation
 
 /// ViewModel for the root dashboard.
 /// Owns only the state slices the UI actually renders.
-/// Keeps ContentView free of direct container / Nexus / PersonaManager reach.
 @MainActor
 @Observable
 final class HomeViewModel {
@@ -11,6 +10,9 @@ final class HomeViewModel {
 
     private(set) var personaDisplayName: String = ""
     private(set) var personaDescription: String = ""
+    private(set) var activePersonaID: String = "quicksilver"
+    private(set) var availablePersonas: [PersonaConfiguration] = PersonaConfiguration.all
+
     private(set) var isNexusActive: Bool = false
     private(set) var overallHealthScore: Int = 100
     private(set) var lowPowerMode: Bool = false
@@ -21,7 +23,7 @@ final class HomeViewModel {
     private(set) var thermalState: String = "unknown"
     private(set) var latestInsight: Insight?
 
-    // MARK: - Dependencies (retained, not published)
+    // MARK: - Dependencies
 
     private let container: DependencyContainer
 
@@ -30,12 +32,12 @@ final class HomeViewModel {
         refresh()
     }
 
-    /// Pull the latest values from the live container.
-    /// Called on appear and can be driven by Observation of the container later.
     func refresh() {
         let config = container.activeConfiguration
         personaDisplayName = config.displayName
         personaDescription = config.shortDescription
+        activePersonaID = config.id
+        availablePersonas = container.personaManager.availableConfigurations
 
         let state = container.nexus.state
         isNexusActive = state.isActive
@@ -59,10 +61,10 @@ final class HomeViewModel {
     }
 
     func switchPersona(to id: String) {
+        guard id != activePersonaID else { return }
         container.switchPersona(to: id)
-        // Refresh after a short delay to pick up the change (policy may be async)
         Task {
-            try? await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: .milliseconds(120))
             refresh()
         }
     }

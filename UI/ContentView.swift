@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Root content view.
-/// Surfaces the active persona, live Nexus health signals, and the most recent insight.
-/// Follows HIG: clear hierarchy, readable typography, sufficient contrast, no decorative noise.
-/// Now driven by HomeViewModel — no direct reach into container.nexus or personaManager.
+/// Root content view driven by HomeViewModel.
 struct ContentView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: HomeViewModel?
@@ -30,6 +27,7 @@ struct ContentView: View {
         ScrollView {
             VStack(spacing: 20) {
                 personaHeader(vm)
+                personaSwitcher(vm)
                 nexusStatusCard(vm)
                 metricsRow(vm)
                 if let insight = vm.latestInsight {
@@ -38,9 +36,7 @@ struct ContentView: View {
             }
             .padding()
         }
-        .onAppear {
-            vm.refresh()
-        }
+        .onAppear { vm.refresh() }
     }
 
     // MARK: - Persona
@@ -56,6 +52,18 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func personaSwitcher(_ vm: HomeViewModel) -> some View {
+        Picker("Persona", selection: Binding(
+            get: { vm.activePersonaID },
+            set: { vm.switchPersona(to: $0) }
+        )) {
+            ForEach(vm.availablePersonas, id: \.id) { config in
+                Text(config.displayName).tag(config.id)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Nexus status
@@ -101,24 +109,9 @@ struct ContentView: View {
 
     private func metricsRow(_ vm: HomeViewModel) -> some View {
         HStack(spacing: 12) {
-            metricTile(
-                title: "Battery",
-                value: vm.batteryLevelText,
-                subtitle: vm.batteryState,
-                systemImage: "battery.100"
-            )
-            metricTile(
-                title: "Network",
-                value: vm.networkStatus,
-                subtitle: vm.networkSubtitle,
-                systemImage: "wifi"
-            )
-            metricTile(
-                title: "Thermal",
-                value: vm.thermalState,
-                subtitle: nil,
-                systemImage: "thermometer.medium"
-            )
+            metricTile(title: "Battery", value: vm.batteryLevelText, subtitle: vm.batteryState, systemImage: "battery.100")
+            metricTile(title: "Network", value: vm.networkStatus, subtitle: vm.networkSubtitle, systemImage: "wifi")
+            metricTile(title: "Thermal", value: vm.thermalState, subtitle: nil, systemImage: "thermometer.medium")
         }
     }
 
@@ -169,8 +162,6 @@ struct ContentView: View {
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
-
-    // MARK: - Helpers
 
     private func healthColor(_ score: Int) -> Color {
         switch score {

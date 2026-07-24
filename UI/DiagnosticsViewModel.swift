@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Nexus
 
 @MainActor
 @Observable
@@ -22,7 +23,6 @@ final class DiagnosticsViewModel {
         refresh()
     }
 
-    /// Pulls current truth from DependencyContainer / NexusState.
     func refresh() {
         let state = container.nexus.state
         isActive = state.isActive
@@ -36,8 +36,6 @@ final class DiagnosticsViewModel {
         lastRefresh = Date()
     }
 
-    /// Lightweight live refresh while the Diagnostics screen is visible.
-    /// Interval is conservative to stay battery-friendly.
     func startLiveRefresh(interval: Duration = .seconds(4)) {
         stopLiveRefresh()
         refreshTask = Task { [weak self] in

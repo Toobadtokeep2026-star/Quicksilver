@@ -1,4 +1,5 @@
 import Foundation
+import Nexus
 
 /// Presentation-only helper.
 /// Takes a neutral Insight + active persona and produces display strings.
@@ -28,7 +29,7 @@ enum InsightPresenter {
                 action: insight.suggestedAction,
                 styleLabel: "Eternal"
             )
-        default: // quicksilver
+        default:
             return Display(
                 title: insight.title,
                 body: insight.body,
@@ -39,7 +40,6 @@ enum InsightPresenter {
     }
 
     private static func forgeBody(_ body: String) -> String {
-        // Calm, precise framing without inventing new facts
         if body.hasSuffix(".") {
             return body + " Assess impact before acting."
         }

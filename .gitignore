@@ -1,10 +1,6 @@
-# Xcode
-*.xcodeproj/*
-!*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
-*.xcworkspace/*
-!*.xcworkspace/contents.xcworkspacedata
+# Xcode / XcodeGen (project is generated — never commit it)
+*.xcodeproj/
+*.xcworkspace/
 DerivedData/
 build/
 *.pbxuser
@@ -23,18 +19,17 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.xcresult
 
 # Swift Package Manager
 .build/
-.swiftpm/
-Packages/
-Package.resolved
-*.xcodeproj
+.swiftpm/config/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+# Keep Package.resolved when external deps appear (currently none)
+# Package.resolved
 
-# CocoaPods (if ever used)
+# CocoaPods / Carthage (unused, defensive)
 Pods/
-
-# Carthage
 Carthage/Build/
 
 # Fastlane
@@ -50,17 +45,24 @@ fastlane/test_output
 Icon
 ._*
 
-# IDEs
+# IDEs / editors
 .idea/
 *.swp
 *~
+.vscode/
 
-# Testing
-*.xcresult
-
-# Secrets
+# Secrets & signing material — never commit
 *.p12
 *.mobileprovision
+*.cer
+*.certSigningRequest
 .env
 .env.*
 Secrets.xcconfig
+**/AuthKey_*.p8
+
+# CI local artifacts
+xcodebuild.log
+spm-test.log
+archive.log
+export.log

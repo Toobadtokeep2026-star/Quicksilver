@@ -1,6 +1,11 @@
 import Foundation
 import SwiftUI
 import Observation
+import Core
+import Personas
+import Memory
+import ServicesAI
+import Nexus
 import QuicksilverIntents
 
 @MainActor
@@ -25,7 +30,6 @@ final class DependencyContainer {
 
         self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
 
-        // Prefer SwiftData; fall back to UserDefaults if container creation fails.
         let memoryStore: MemoryStore
         if let swiftDataStore = try? SwiftDataMemoryStore() {
             memoryStore = swiftDataStore

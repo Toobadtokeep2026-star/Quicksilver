@@ -17,7 +17,7 @@ public enum KeychainStore {
         ]
 
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, & item)
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess,
               let data = item as? Data,
               let value = String(data: data, encoding: .utf8) else {

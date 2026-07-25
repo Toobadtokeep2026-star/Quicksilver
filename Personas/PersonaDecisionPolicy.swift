@@ -58,7 +58,7 @@ public struct PersonaDecisionPolicy: Sendable {
         guard let kind else { return nil }
         switch kind {
         case .building, .debugging: return .forge
-        case .exploring, .creative: return .quicksilver
+        case .exploring: return .quicksilver
         case .reflecting: return .eternal
         case .communicating: return .quicksilver
         case .unknown: return nil

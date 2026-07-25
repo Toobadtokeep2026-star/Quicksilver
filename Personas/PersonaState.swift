@@ -1,23 +1,23 @@
 import Foundation
 
 /// Runtime state of the currently active persona.
-struct PersonaState: Sendable, Equatable {
-    let configuration: PersonaConfiguration
-    var sessionStart: Date
-    var interactionCount: Int
-    var lastSwitchedAt: Date?
+public struct PersonaState: Sendable, Equatable {
+    public let configuration: PersonaConfiguration
+    public var sessionStart: Date
+    public var interactionCount: Int
+    public var lastSwitchedAt: Date?
 
-    var id: String { configuration.id }
-    var displayName: String { configuration.displayName }
+    public var id: String { configuration.id }
+    public var displayName: String { configuration.displayName }
 
-    init(configuration: PersonaConfiguration) {
+    public init(configuration: PersonaConfiguration) {
         self.configuration = configuration
         self.sessionStart = Date()
         self.interactionCount = 0
         self.lastSwitchedAt = nil
     }
 
-    mutating func recordInteraction() {
+    public mutating func recordInteraction() {
         interactionCount += 1
     }
 }

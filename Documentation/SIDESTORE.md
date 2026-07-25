@@ -1,6 +1,7 @@
 # Quicksilver → SideStore (iPhone-only path)
 
 **Target:** iPhone 14 / iOS 27 beta  
+**Minimum deployment target:** iOS 27.0  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
 
 ## Prerequisites
@@ -10,6 +11,7 @@
 2. LocalDevVPN installed from the App Store and connected whenever you refresh or install.  
 3. Free or paid Apple ID signed into SideStore.  
 4. GitHub account that can trigger Actions on this repository.
+5. Device running **iOS 27 beta** (or later).
 
 ## Produce the IPA (cloud) — Unsigned path (no secrets needed)
 
@@ -65,7 +67,8 @@ When secrets are present you get both artifacts: unsigned + signed.
 - Display name: Quicksilver
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
-- Minimum deployment target is iOS 17.0 (compatible with iOS 27).
+- **Minimum deployment target is iOS 27.0** (matches iPhone 14 running iOS 27 beta).
+- Built with Swift 6 strict concurrency.
 
 ## Failure modes
 
@@ -75,5 +78,6 @@ When secrets are present you get both artifacts: unsigned + signed.
 | SideStore rejects unsigned IPA | Rare packaging issue | Re-run workflow or try signed path |
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
 | Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
+| Install fails with OS version error | Device not on iOS 27+ | Update to iOS 27 beta |
 
 No Mac, no USB, no AltServer required after SideStore itself is installed.

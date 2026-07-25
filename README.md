@@ -2,6 +2,8 @@
 
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
+**Target:** iPhone 14 / **iOS 27 beta** (minimum deployment target 27.0)
+
 ```
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
 ```
@@ -19,9 +21,9 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Requires repository secrets (`BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64`, optional `TEAM_ID` / `KEYCHAIN_PASSWORD`). Without secrets the job still compiles for device and explains what is missing.
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present.
 
-Artifacts (logs, and IPA when signing is configured) are downloadable from the workflow run page on your iPhone.
+Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
 ## Status
 
@@ -52,17 +54,17 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
+Requires Xcode with iOS 27 SDK.
+
 ## On-device (iPhone 14 / iOS 27 beta) — SideStore path
 
 Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release).
-2. Download the IPA artifact from the finished run.
+2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Settings → paste xAI key → enable AI Service.
 5. Validate Home → Diagnostics → Memory → Ask → persona switch.
-
-Requires repository secrets for a signed IPA. Without them the job still compiles for device and uploads diagnostics.
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 

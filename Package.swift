@@ -20,7 +20,12 @@ let package = Package(
         ),
         .target(name: "Personas", dependencies: ["Core"], path: "Personas"),
         .target(name: "ServicesAI", dependencies: ["Core"], path: "Services/AI"),
-        .target(name: "Nexus", dependencies: ["Core"], path: "Nexus"),
+        .target(
+            name: "Nexus",
+            dependencies: ["Core"],
+            path: "Nexus",
+            exclude: ["PIPELINE.md"]
+        ),
         .target(name: "QuicksilverIntents", dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"], path: "Intents"),
         .testTarget(
             name: "QuicksilverCoreTests",

@@ -21,20 +21,30 @@ public final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sen
 
         thermalToken = NotificationCenter.default.addObserver(
             forName: ProcessInfo.thermalStateDidChangeNotification,
-            object: nil, queue: .main
+            object: nil,
+            queue: .main
         ) { [weak self] _ in self?.update() }
 
+        // Correct constant: ProcessInfo has no powerStateDidChangeNotification member.
+        // Low-power mode changes are posted as NSProcessInfoPowerStateDidChange.
         powerToken = NotificationCenter.default.addObserver(
-            forName: ProcessInfo.powerStateDidChangeNotification,
-            object: nil, queue: .main
+            forName: .NSProcessInfoPowerStateDidChange,
+            object: nil,
+            queue: .main
         ) { [weak self] _ in self?.update() }
     }
 
     public func stop() {
         guard isRunning else { return }
         isRunning = false
-        if let thermalToken { NotificationCenter.default.removeObserver(thermalToken); self.thermalToken = nil }
-        if let powerToken { NotificationCenter.default.removeObserver(powerToken); self.powerToken = nil }
+        if let thermalToken {
+            NotificationCenter.default.removeObserver(thermalToken)
+            self.thermalToken = nil
+        }
+        if let powerToken {
+            NotificationCenter.default.removeObserver(powerToken)
+            self.powerToken = nil
+        }
     }
 
     deinit { stop() }

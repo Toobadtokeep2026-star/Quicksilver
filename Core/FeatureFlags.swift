@@ -6,13 +6,13 @@ import Observation
 /// Future: remote config without locking the app to a specific backend.
 @MainActor
 @Observable
-final class FeatureFlags {
-    private(set) var flags: [String: Bool]
+public final class FeatureFlags {
+    public private(set) var flags: [String: Bool]
 
     private let defaults: UserDefaults
     private let storageKey = "quicksilver.featureFlags"
 
-    init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let saved = defaults.dictionary(forKey: storageKey) as? [String: Bool] {
             self.flags = saved
@@ -29,16 +29,16 @@ final class FeatureFlags {
         "experimentalEventBus": true
     ]
 
-    func isEnabled(_ key: String) -> Bool {
+    public func isEnabled(_ key: String) -> Bool {
         flags[key] ?? false
     }
 
-    func set(_ key: String, enabled: Bool) {
+    public func set(_ key: String, enabled: Bool) {
         flags[key] = enabled
         defaults.set(flags, forKey: storageKey)
     }
 
-    func resetToDefaults() {
+    public func resetToDefaults() {
         flags = Self.defaultFlags
         defaults.set(flags, forKey: storageKey)
     }

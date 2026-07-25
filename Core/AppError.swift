@@ -2,7 +2,7 @@ import Foundation
 
 /// Typed error surface for Quicksilver.
 /// Prevents stringly-typed errors and enables structured logging / user messaging later.
-enum AppError: Error, LocalizedError, Sendable {
+public enum AppError: Error, LocalizedError, Sendable {
     case configurationMissing(String)
     case personaUnavailable(String)
     case nexusNotReady
@@ -12,7 +12,7 @@ enum AppError: Error, LocalizedError, Sendable {
     case aiRequestFailed(String)
     case unknown(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .configurationMissing(let key):
             return "Missing configuration: \(key)"

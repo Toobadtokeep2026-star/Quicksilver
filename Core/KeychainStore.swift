@@ -4,10 +4,10 @@ import Security
 /// Minimal Keychain helper for storing sensitive configuration (API keys).
 /// Privacy-first: values never leave the device, never logged, never written to UserDefaults.
 @MainActor
-enum KeychainStore {
+public enum KeychainStore {
     private static let service = "com.quicksilver.keychain"
 
-    static func string(forKey key: String) -> String? {
+    public static func string(forKey key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -17,7 +17,7 @@ enum KeychainStore {
         ]
 
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        let status = SecItemCopyMatching(query as CFDictionary, & item)
         guard status == errSecSuccess,
               let data = item as? Data,
               let value = String(data: data, encoding: .utf8) else {
@@ -27,7 +27,7 @@ enum KeychainStore {
     }
 
     @discardableResult
-    static func set(_ value: String?, forKey key: String) -> Bool {
+    public static func set(_ value: String?, forKey key: String) -> Bool {
         // Delete first so we can replace
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -52,7 +52,7 @@ enum KeychainStore {
         return status == errSecSuccess
     }
 
-    static func delete(forKey key: String) {
+    public static func delete(forKey key: String) {
         set(nil, forKey: key)
     }
 }

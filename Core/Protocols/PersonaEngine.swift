@@ -2,6 +2,7 @@ import Foundation
 
 /// Contract for persona selection and behavioral influence.
 /// Implementations live in the Personas module.
+@MainActor
 public protocol PersonaEngine: AnyObject {
     /// Currently active persona identifier.
     var activePersonaID: String { get }

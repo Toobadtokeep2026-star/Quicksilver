@@ -11,17 +11,20 @@
 3. Free or paid Apple ID signed into SideStore.  
 4. GitHub account that can trigger Actions on this repository.
 
-## Produce the IPA (cloud)
+## Produce the IPA (cloud) — Unsigned path (no secrets needed)
 
-1. On your iPhone, open the repository in Safari or the GitHub app:  
+1. On your iPhone, open the repository:  
    https://github.com/Toobadtokeep2026-star/Quicksilver
 2. Go to **Actions** → **Archive IPA** → **Run workflow**.
 3. Choose configuration (`Release` recommended).
 4. Wait for the job to finish (usually 4–8 minutes on macos-15 runners).
+5. Download the artifact named **Quicksilver-unsigned-IPA**.
 
-### Signing secrets (required for a real installable IPA)
+The workflow always builds for generic iOS device with code signing disabled and packages a proper unsigned IPA (`Payload/Quicksilver.app`). SideStore will re-sign it with your Apple ID when you install.
 
-Add these repository secrets (Settings → Secrets and variables → Actions):
+### Optional: Signed IPA (better reliability)
+
+If you later add these repository secrets (Settings → Secrets and variables → Actions), the same workflow will also produce a development-signed IPA:
 
 | Secret | Purpose |
 |--------|---------|
@@ -31,14 +34,7 @@ Add these repository secrets (Settings → Secrets and variables → Actions):
 | `TEAM_ID` | (optional) Your Apple Team ID |
 | `KEYCHAIN_PASSWORD` | (optional) Temporary keychain password |
 
-Without the three core secrets the workflow still compiles for device and uploads logs, but does **not** produce an IPA.
-
-When secrets are present the job:
-
-- Generates the Xcode project with XcodeGen
-- Archives for generic iOS device
-- Exports a development IPA
-- Uploads the `.ipa` as a workflow artifact
+When secrets are present you get both artifacts: unsigned + signed.
 
 ## Install on device
 
@@ -75,8 +71,8 @@ When secrets are present the job:
 
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
-| Workflow produces no IPA | Missing signing secrets | Add the three required secrets |
-| SideStore rejects IPA | Wrong certificate / team mismatch | Re-export with matching development profile |
+| Workflow fails to find .app | XcodeGen or build error | Check build-logs artifact |
+| SideStore rejects unsigned IPA | Rare packaging issue | Re-run workflow or try signed path |
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
 | Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
 

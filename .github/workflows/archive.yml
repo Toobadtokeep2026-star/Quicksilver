@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   archive:
-    name: Archive & Export IPA
+    name: Archive & Export IPA (Unsigned + Optional Signed)
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -61,10 +61,10 @@ jobs:
         run: |
           if [[ -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" && -n "${{ secrets.P12_PASSWORD }}" && -n "${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}" ]]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "Signing secrets detected."
+            echo "Signing secrets detected — will also produce signed IPA."
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Signing secrets not configured. Archive will build for generic iOS device without export. Add BUILD_CERTIFICATE_BASE64, P12_PASSWORD, BUILD_PROVISION_PROFILE_BASE64 (and optionally KEYCHAIN_PASSWORD, TEAM_ID) to enable IPA export."
+            echo "No signing secrets. Will produce unsigned IPA for SideStore re-signing."
           fi
 
       - name: Install signing certificate & profile
@@ -89,41 +89,59 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: Archive
+      - name: Build (unsigned path)
+        id: build
         run: |
           set -euo pipefail
-          mkdir -p build
-          if [[ "${{ steps.signing.outputs.available }}" == "true" ]]; then
-            xcodebuild \
-              -project Quicksilver.xcodeproj \
-              -scheme Quicksilver \
-              -configuration ${{ inputs.configuration }} \
-              -destination "generic/platform=iOS" \
-              -archivePath build/Quicksilver.xcarchive \
-              -derivedDataPath DerivedData \
-              archive \
-              2>&1 | tee archive.log
-          else
-            # Unsigned archive attempt for diagnostics only — expected to fail at codesign
-            # Prefer validating the project still compiles for device architecture
-            xcodebuild \
-              -project Quicksilver.xcodeproj \
-              -scheme Quicksilver \
-              -configuration ${{ inputs.configuration }} \
-              -destination "generic/platform=iOS" \
-              -derivedDataPath DerivedData \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              build \
-              2>&1 | tee archive.log
-            echo "::notice::Unsigned device build completed. Configure signing secrets to produce an IPA."
-          fi
+          mkdir -p build/unsigned
 
-      - name: Export IPA
+          # Force device architecture build with signing completely disabled
+          xcodebuild \
+            -project Quicksilver.xcodeproj \
+            -scheme Quicksilver \
+            -configuration ${{ inputs.configuration }} \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            build \
+            2>&1 | tee build-unsigned.log
+
+          # Locate the built .app
+          APP_PATH=$(find DerivedData -name "Quicksilver.app" -type d | head -n 1)
+          if [[ -z "$APP_PATH" ]]; then
+            echo "::error::Could not find Quicksilver.app after build"
+            exit 1
+          fi
+          echo "Found app at: $APP_PATH"
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+
+          # Package as unsigned IPA (SideStore can re-sign this)
+          mkdir -p build/unsigned/Payload
+          cp -R "$APP_PATH" build/unsigned/Payload/
+          cd build/unsigned
+          zip -r ../Quicksilver-unsigned.ipa Payload
+          cd ../..
+          ls -lh build/Quicksilver-unsigned.ipa
+          echo "Unsigned IPA created successfully."
+
+      - name: Archive + Export signed IPA (optional)
         if: steps.signing.outputs.available == 'true'
         run: |
           set -euo pipefail
+          mkdir -p build
+          xcodebuild \
+            -project Quicksilver.xcodeproj \
+            -scheme Quicksilver \
+            -configuration ${{ inputs.configuration }} \
+            -destination "generic/platform=iOS" \
+            -archivePath build/Quicksilver.xcarchive \
+            -derivedDataPath DerivedData-Signed \
+            archive \
+            2>&1 | tee archive-signed.log
+
           cat > build/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -140,30 +158,40 @@ jobs:
           </dict>
           </plist>
           EOF
+
           xcodebuild -exportArchive \
             -archivePath build/Quicksilver.xcarchive \
             -exportOptionsPlist build/ExportOptions.plist \
             -exportPath build/ipa \
-            2>&1 | tee export.log
+            2>&1 | tee export-signed.log
           ls -la build/ipa || true
 
-      - name: Upload IPA artifact
+      - name: Upload unsigned IPA (always)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quicksilver-unsigned-IPA
+          path: build/Quicksilver-unsigned.ipa
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload signed IPA (if available)
         if: steps.signing.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: Quicksilver-IPA
+          name: Quicksilver-signed-IPA
           path: build/ipa/*.ipa
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Upload archive logs
+      - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: archive-logs
+          name: build-logs
           path: |
-            archive.log
-            export.log
+            build-unsigned.log
+            archive-signed.log
+            export-signed.log
             build/
           retention-days: 7
           if-no-files-found: ignore

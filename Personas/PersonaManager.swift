@@ -25,7 +25,9 @@ public final class PersonaManager: PersonaEngine {
     private var latestQueryIntent: QueryIntent?
     private var latestMemoryHints: [String] = []
 
-    private var subscriptionID: UUID?
+    /// Stored as nonisolated(unsafe) so deinit can read it without main-actor isolation errors.
+    /// Safe because the manager is long-lived and only written on MainActor during init.
+    private nonisolated(unsafe) var subscriptionID: UUID?
 
     public init(
         initial: PersonaConfiguration = .quicksilver,
@@ -52,7 +54,8 @@ public final class PersonaManager: PersonaEngine {
 
     deinit {
         if let id = subscriptionID {
-            Task { await eventBus.unsubscribe(id) }
+            let bus = eventBus
+            Task { await bus.unsubscribe(id) }
         }
     }
 

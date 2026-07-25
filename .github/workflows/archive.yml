@@ -167,7 +167,7 @@ jobs:
           ls -la build/ipa || true
 
       - name: Upload unsigned IPA (always)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Quicksilver-unsigned-IPA
           path: build/Quicksilver-unsigned.ipa
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload signed IPA (if available)
         if: steps.signing.outputs.available == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Quicksilver-signed-IPA
           path: build/ipa/*.ipa
@@ -185,7 +185,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-logs
           path: |

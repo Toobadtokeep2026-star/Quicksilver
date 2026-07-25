@@ -1,19 +1,19 @@
 import Foundation
 
-struct DiagnosticEvent: Identifiable, Sendable, Equatable {
-    let id: UUID
-    let signalID: UUID?
-    let title: String
-    let detail: String
-    let severity: Severity
-    let timestamp: Date
-    let source: Signal.Source
+public struct DiagnosticEvent: Identifiable, Sendable, Equatable {
+    public let id: UUID
+    public let signalID: UUID?
+    public let title: String
+    public let detail: String
+    public let severity: Severity
+    public let timestamp: Date
+    public let source: Signal.Source
 
-    enum Severity: String, Sendable, CaseIterable {
+    public enum Severity: String, Sendable, CaseIterable {
         case info, notice, warning, critical
     }
 
-    init(id: UUID = UUID(), signalID: UUID? = nil, title: String, detail: String, severity: Severity = .info, timestamp: Date = Date(), source: Signal.Source) {
+    public init(id: UUID = UUID(), signalID: UUID? = nil, title: String, detail: String, severity: Severity = .info, timestamp: Date = Date(), source: Signal.Source) {
         self.id = id
         self.signalID = signalID
         self.title = title

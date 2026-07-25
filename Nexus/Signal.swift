@@ -1,25 +1,25 @@
 import Foundation
 
 /// Unified signal representation for the Nexus awareness layer.
-struct Signal: Identifiable, Sendable, Equatable {
-    let id: UUID
-    let source: Source
-    let category: Category
-    let timestamp: Date
-    let value: String
-    let numericValue: Double?
-    let confidence: Double
-    let metadata: [String: String]
+public struct Signal: Identifiable, Sendable, Equatable {
+    public let id: UUID
+    public let source: Source
+    public let category: Category
+    public let timestamp: Date
+    public let value: String
+    public let numericValue: Double?
+    public let confidence: Double
+    public let metadata: [String: String]
 
-    enum Source: String, Sendable, Codable, CaseIterable {
+    public enum Source: String, Sendable, Codable, CaseIterable {
         case network, battery, storage, device, lifecycle, user, system
     }
 
-    enum Category: String, Sendable, Codable, CaseIterable {
+    public enum Category: String, Sendable, Codable, CaseIterable {
         case connectivity, power, capacity, performance, environment, diagnostic
     }
 
-    init(id: UUID = UUID(), source: Source, category: Category, timestamp: Date = Date(), value: String, numericValue: Double? = nil, confidence: Double = 1.0, metadata: [String: String] = [:]) {
+    public init(id: UUID = UUID(), source: Source, category: Category, timestamp: Date = Date(), value: String, numericValue: Double? = nil, confidence: Double = 1.0, metadata: [String: String] = [:]) {
         self.id = id
         self.source = source
         self.category = category

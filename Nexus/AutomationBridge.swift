@@ -3,9 +3,9 @@ import Core
 
 /// Bridge between Nexus perception and external automation surfaces (App Intents / Shortcuts).
 /// Kept lightweight and privacy-first: only exposes already-collected public signals.
-final class AutomationBridge: @unchecked Sendable {
+public final class AutomationBridge: @unchecked Sendable {
 
-    enum Capability: String, CaseIterable {
+    public enum Capability: String, CaseIterable {
         case runDiagnostic
         case reportNetworkStatus
         case reportBatteryStatus
@@ -13,24 +13,26 @@ final class AutomationBridge: @unchecked Sendable {
         case reportOverallHealth
     }
 
-    private(set) var isConfigured = false
+    public private(set) var isConfigured = false
     private weak var nexus: NexusCoordinator?
 
-    func configure(nexus: NexusCoordinator? = nil) {
+    public init() {}
+
+    public func configure(nexus: NexusCoordinator? = nil) {
         self.nexus = nexus
         isConfigured = true
     }
 
     /// Convenience used by NexusCoordinator.start()
-    func configure() {
+    public func configure() {
         isConfigured = true
     }
 
-    var availableCapabilities: [Capability] { Capability.allCases }
+    public var availableCapabilities: [Capability] { Capability.allCases }
 
     // MARK: - Capability implementations
 
-    func reportNetworkStatus() throws -> String {
+    public func reportNetworkStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
             var parts = [state.networkStatus]
@@ -41,7 +43,7 @@ final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    func reportBatteryStatus() throws -> String {
+    public func reportBatteryStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
             let level = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
@@ -50,7 +52,7 @@ final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    func reportOverallHealth() throws -> String {
+    public func reportOverallHealth() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
             return "Health \(state.overallHealthScore) | Network \(state.networkHealthScore) | Power \(state.powerHealthScore)"
@@ -58,7 +60,7 @@ final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    func triggerDiagnostic(named name: String) throws -> String {
+    public func triggerDiagnostic(named name: String) throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
 
         switch name.lowercased() {

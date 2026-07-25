@@ -2,18 +2,20 @@ import Foundation
 import Network
 import Core
 
-final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
-    var diagnosticID: String { "network" }
+public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
+    public var diagnosticID: String { "network" }
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network")
     private var isRunning = false
-    private(set) var isConnected = false
-    private(set) var isExpensive = false
-    private(set) var isConstrained = false
-    var onChange: ((Bool, Bool, Bool) -> Void)?
+    public private(set) var isConnected = false
+    public private(set) var isExpensive = false
+    public private(set) var isConstrained = false
+    public var onChange: ((Bool, Bool, Bool) -> Void)?
 
-    func start() {
+    public init() {}
+
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
         monitor.pathUpdateHandler = { [weak self] path in
@@ -27,7 +29,7 @@ final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
         monitor.start(queue: queue)
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         monitor.cancel()
         isRunning = false

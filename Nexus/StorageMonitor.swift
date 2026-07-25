@@ -1,16 +1,18 @@
 import Foundation
 import Core
 
-final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
-    var diagnosticID: String { "storage" }
+public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
+    public var diagnosticID: String { "storage" }
 
     private var isRunning = false
     private var timer: Timer?
-    private(set) var availableGB: Double = 0
-    private(set) var totalGB: Double = 0
-    var onChange: ((Double, Double) -> Void)?
+    public private(set) var availableGB: Double = 0
+    public private(set) var totalGB: Double = 0
+    public var onChange: ((Double, Double) -> Void)?
 
-    func start() {
+    public init() {}
+
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
         sample()
@@ -22,7 +24,7 @@ final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
         }
     }
 
-    func stop() {
+    public func stop() {
         isRunning = false
         timer?.invalidate()
         timer = nil

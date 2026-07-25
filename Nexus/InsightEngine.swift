@@ -1,9 +1,10 @@
 import Foundation
 
 /// Produces insights from signals. Persona-agnostic — voice is applied at presentation time.
-struct InsightEngine: Sendable {
+public struct InsightEngine: Sendable {
+    public init() {}
 
-    func insight(for signal: Signal, recent: [Signal], personaID: String) -> Insight? {
+    public func insight(for signal: Signal, recent: [Signal], personaID: String) -> Insight? {
         switch signal.source {
         case .network: return networkInsight(signal: signal, recent: recent, personaID: personaID)
         case .battery: return batteryInsight(signal: signal, recent: recent, personaID: personaID)

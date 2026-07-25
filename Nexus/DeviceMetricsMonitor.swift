@@ -1,18 +1,20 @@
 import Foundation
 import Core
 
-final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
-    var diagnosticID: String { "device" }
+public final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
+    public var diagnosticID: String { "device" }
 
     private var isRunning = false
     private var thermalToken: NSObjectProtocol?
     private var powerToken: NSObjectProtocol?
 
-    private(set) var thermalStateDescription: String = "unknown"
-    private(set) var isLowPowerMode = false
-    var onChange: ((String, Bool) -> Void)?
+    public private(set) var thermalStateDescription: String = "unknown"
+    public private(set) var isLowPowerMode = false
+    public var onChange: ((String, Bool) -> Void)?
 
-    func start() {
+    public init() {}
+
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
         update()
@@ -28,7 +30,7 @@ final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
         ) { [weak self] _ in self?.update() }
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         isRunning = false
         if let thermalToken { NotificationCenter.default.removeObserver(thermalToken); self.thermalToken = nil }

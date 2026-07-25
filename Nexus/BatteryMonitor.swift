@@ -6,18 +6,20 @@ import UIKit
 
 /// Battery perception using only public UIDevice APIs.
 /// Token-based observers for clean lifecycle management.
-final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
-    var diagnosticID: String { "battery" }
+public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
+    public var diagnosticID: String { "battery" }
 
     private var isRunning = false
     private var levelToken: NSObjectProtocol?
     private var stateToken: NSObjectProtocol?
 
-    private(set) var level: Double = -1
-    private(set) var stateDescription: String = "unknown"
-    var onChange: ((Double, String) -> Void)?
+    public private(set) var level: Double = -1
+    public private(set) var stateDescription: String = "unknown"
+    public var onChange: ((Double, String) -> Void)?
 
-    func start() {
+    public init() {}
+
+    public func start() {
         guard !isRunning else { return }
         isRunning = true
 
@@ -40,7 +42,7 @@ final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
         #endif
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         isRunning = false
 

@@ -20,12 +20,12 @@ public final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sen
         update()
 
         thermalToken = NotificationCenter.default.addObserver(
-            forName: Notification.Name.NSProcessInfoThermalStateDidChange,
+            forName: ProcessInfo.thermalStateDidChangeNotification,
             object: nil, queue: .main
         ) { [weak self] _ in self?.update() }
 
         powerToken = NotificationCenter.default.addObserver(
-            forName: .NSProcessInfoPowerStateDidChange,
+            forName: ProcessInfo.powerStateDidChangeNotification,
             object: nil, queue: .main
         ) { [weak self] _ in self?.update() }
     }

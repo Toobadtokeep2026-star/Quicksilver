@@ -32,6 +32,7 @@ public final class AutomationBridge: @unchecked Sendable {
 
     // MARK: - Capability implementations
 
+    @MainActor
     public func reportNetworkStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -43,6 +44,7 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
+    @MainActor
     public func reportBatteryStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -52,6 +54,7 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
+    @MainActor
     public func reportOverallHealth() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -60,6 +63,7 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
+    @MainActor
     public func triggerDiagnostic(named name: String) throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
 

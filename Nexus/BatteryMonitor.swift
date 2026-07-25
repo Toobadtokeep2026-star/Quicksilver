@@ -71,6 +71,7 @@ public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
         case .charging: stateDescription = "charging"
         case .full: stateDescription = "full"
         case .unplugged: stateDescription = "unplugged"
+        case .unknown: stateDescription = "unknown"
         @unknown default: stateDescription = "unknown"
         }
         onChange?(level, stateDescription)

@@ -30,22 +30,34 @@ jobs:
       - name: Select Xcode
         run: |
           set -euo pipefail
-          if [[ -d /Applications/Xcode_16.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app
-          elif [[ -d /Applications/Xcode_16.3.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.3.app
-          elif [[ -d /Applications/Xcode_16.2.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app
-          elif [[ -d /Applications/Xcode_16.1.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app
-          elif [[ -d /Applications/Xcode_16.0.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app
-          elif [[ -d /Applications/Xcode_15.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          else
-            sudo xcode-select -s /Applications/Xcode.app
+          echo "Available Xcode apps:"
+          ls /Applications | grep -i xcode || true
+
+          SELECTED=""
+          for candidate in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode_16.1.app \
+            /Applications/Xcode_16.0.app \
+            /Applications/Xcode_15.4.app \
+            /Applications/Xcode.app
+          do
+            if [[ -d "$candidate" ]]; then
+              SELECTED="$candidate"
+              break
+            fi
+          done
+
+          if [[ -z "$SELECTED" ]]; then
+            echo "::error::No usable Xcode installation found on runner"
+            exit 1
           fi
+
+          sudo xcode-select -s "$SELECTED"
+          echo "Selected: $(xcode-select -p)"
           xcodebuild -version
+          swift --version
 
       - name: Install XcodeGen
         run: brew install xcodegen || brew upgrade xcodegen || true
@@ -55,6 +67,7 @@ jobs:
           set -euo pipefail
           xcodegen generate
           test -d Quicksilver.xcodeproj
+          echo "Project generated successfully."
 
       - name: Check signing secrets
         id: signing
@@ -95,7 +108,6 @@ jobs:
           set -euo pipefail
           mkdir -p build/unsigned
 
-          # Force device architecture build with signing completely disabled
           xcodebuild \
             -project Quicksilver.xcodeproj \
             -scheme Quicksilver \
@@ -109,7 +121,6 @@ jobs:
             build \
             2>&1 | tee build-unsigned.log
 
-          # Locate the built .app
           APP_PATH=$(find DerivedData -name "Quicksilver.app" -type d | head -n 1)
           if [[ -z "$APP_PATH" ]]; then
             echo "::error::Could not find Quicksilver.app after build"
@@ -118,6 +129,29 @@ jobs:
           echo "Found app at: $APP_PATH"
           echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
 
+          # --- SideStore critical: verify persona prompts are embedded ---
+          echo "Verifying persona prompt resources…"
+          for persona in quicksilver forge eternal; do
+            if [[ -f "$APP_PATH/Personas/${persona}.txt" ]] || [[ -f "$APP_PATH/${persona}.txt" ]]; then
+              echo "  OK  ${persona}.txt present"
+            else
+              # Also check Resources subfolder layouts that Xcode sometimes uses
+              FOUND=$(find "$APP_PATH" -name "${persona}.txt" | head -n 1 || true)
+              if [[ -n "$FOUND" ]]; then
+                echo "  OK  ${persona}.txt found at $FOUND"
+              else
+                echo "::warning::Persona prompt ${persona}.txt not found inside app bundle — PromptManager will use embedded fallback"
+              fi
+            fi
+          done
+
+          # Verify Privacy Manifest if present
+          if [[ -f "$APP_PATH/PrivacyInfo.xcprivacy" ]]; then
+            echo "  OK  PrivacyInfo.xcprivacy present"
+          else
+            echo "::warning::PrivacyInfo.xcprivacy not found in app bundle"
+          fi
+
           # Package as unsigned IPA (SideStore can re-sign this)
           mkdir -p build/unsigned/Payload
           cp -R "$APP_PATH" build/unsigned/Payload/
@@ -125,7 +159,13 @@ jobs:
           zip -r ../Quicksilver-unsigned.ipa Payload
           cd ../..
           ls -lh build/Quicksilver-unsigned.ipa
-          echo "Unsigned IPA created successfully."
+
+          # Basic IPA structure check
+          unzip -l build/Quicksilver-unsigned.ipa | grep -q "Payload/Quicksilver.app" || {
+            echo "::error::IPA does not contain Payload/Quicksilver.app"
+            exit 1
+          }
+          echo "Unsigned IPA created and structure verified."
 
       - name: Archive + Export signed IPA (optional)
         if: steps.signing.outputs.available == 'true'

@@ -50,7 +50,8 @@ jobs:
             App/DependencyContainer.swift \
             Nexus/NexusCoordinator.swift \
             UI/ContentView.swift \
-            Documentation/ARCHITECTURE.md
+            Documentation/ARCHITECTURE.md \
+            PrivacyInfo.xcprivacy
           do
             if [[ ! -f "$f" ]]; then
               echo "::error::Missing required file: $f"
@@ -73,21 +74,26 @@ jobs:
           set -euo pipefail
           echo "Available Xcode apps:"
           ls /Applications | grep -i xcode || true
-          if [[ -d /Applications/Xcode_16.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app
-          elif [[ -d /Applications/Xcode_16.3.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.3.app
-          elif [[ -d /Applications/Xcode_16.2.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app
-          elif [[ -d /Applications/Xcode_16.1.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app
-          elif [[ -d /Applications/Xcode_16.0.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app
-          elif [[ -d /Applications/Xcode_15.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          else
-            sudo xcode-select -s /Applications/Xcode.app
+          SELECTED=""
+          for candidate in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode_16.1.app \
+            /Applications/Xcode_16.0.app \
+            /Applications/Xcode_15.4.app \
+            /Applications/Xcode.app
+          do
+            if [[ -d "$candidate" ]]; then
+              SELECTED="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$SELECTED" ]]; then
+            echo "::error::No usable Xcode installation found"
+            exit 1
           fi
+          sudo xcode-select -s "$SELECTED"
           echo "Active developer dir: $(xcode-select -p)"
           xcodebuild -version
           swift --version
@@ -136,21 +142,26 @@ jobs:
       - name: Select Xcode
         run: |
           set -euo pipefail
-          if [[ -d /Applications/Xcode_16.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app
-          elif [[ -d /Applications/Xcode_16.3.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.3.app
-          elif [[ -d /Applications/Xcode_16.2.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app
-          elif [[ -d /Applications/Xcode_16.1.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app
-          elif [[ -d /Applications/Xcode_16.0.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app
-          elif [[ -d /Applications/Xcode_15.4.app ]]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app
-          else
-            sudo xcode-select -s /Applications/Xcode.app
+          SELECTED=""
+          for candidate in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode_16.1.app \
+            /Applications/Xcode_16.0.app \
+            /Applications/Xcode_15.4.app \
+            /Applications/Xcode.app
+          do
+            if [[ -d "$candidate" ]]; then
+              SELECTED="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$SELECTED" ]]; then
+            echo "::error::No usable Xcode installation found"
+            exit 1
           fi
+          sudo xcode-select -s "$SELECTED"
           xcodebuild -version
           swift --version
 
@@ -173,10 +184,12 @@ jobs:
           echo "Project generated."
           xcodebuild -list -project Quicksilver.xcodeproj
 
-      - name: SwiftLint (advisory)
+      - name: SwiftLint (report)
         run: |
           if command -v swiftlint >/dev/null 2>&1; then
-            echo "=== SwiftLint (advisory) ==="
+            echo "=== SwiftLint ==="
+            # Report only; do not fail the job yet so SideStore path stays unblocked
+            # while we tighten rules over time.
             swiftlint --reporter emoji || true
           else
             echo "SwiftLint not available — skipping"

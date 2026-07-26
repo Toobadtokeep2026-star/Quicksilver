@@ -14,20 +14,20 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 
 | Job | What it does |
 |-----|----------------|
-| **Structure & Contracts** | Verifies modular layout and Core protocols |
+| **Structure & Contracts** | Verifies modular layout, Core protocols, and Privacy Manifest |
 | **SPM Unit Tests** | `swift test` for Core / Memory / Personas / Nexus / AI |
 | **iOS Simulator Build** | XcodeGen → `xcodebuild` for iPhone Simulator (no signing) |
 
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present.
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.
 
 Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
 ## Status
 
-Production hardening complete. See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
 

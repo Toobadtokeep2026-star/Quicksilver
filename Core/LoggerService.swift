@@ -2,6 +2,10 @@ import Foundation
 import os.log
 
 /// Injectable logging service.
+///
+/// Marked `@unchecked Sendable` because `os.Logger` is not currently Sendable.
+/// All public methods are pure and side-effect free beyond logging; safe to call
+/// from any isolation domain.
 public final class LoggerService: @unchecked Sendable {
     private let subsystem: String
 
@@ -34,9 +38,14 @@ public final class LoggerService: @unchecked Sendable {
         (category ?? general).error("\(message, privacy: .public)")
     }
 
+    /// Redacts values that look like API keys or long secrets before they can
+    /// appear in logs or UI error strings.
     public static func redact(_ value: String?, maxVisible: Int = 4) -> String {
         guard let value, !value.isEmpty else { return "<empty>" }
-        if value.count > 20 || value.lowercased().contains("key") || value.hasPrefix("xai-") || value.hasPrefix("sk-") {
+        if value.count > 20
+            || value.lowercased().contains("key")
+            || value.hasPrefix("xai-")
+            || value.hasPrefix("sk-") {
             return "<redacted len=\(value.count)>"
         }
         if value.count <= maxVisible {

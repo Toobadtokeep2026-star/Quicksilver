@@ -24,6 +24,12 @@
 
 The workflow always builds for generic iOS device with code signing disabled and packages a proper unsigned IPA (`Payload/Quicksilver.app`). SideStore will re-sign it with your Apple ID when you install.
 
+Post-build checks now verify:
+- `Quicksilver.app` exists
+- Persona prompt files are present (or warn if missing)
+- PrivacyInfo.xcprivacy is present (or warn)
+- IPA contains `Payload/Quicksilver.app`
+
 ### Optional: Signed IPA (better reliability)
 
 If you later add these repository secrets (Settings → Secrets and variables → Actions), the same workflow will also produce a development-signed IPA:
@@ -65,8 +71,10 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 - Bundle ID: `com.quicksilver.app`
 - Display name: Quicksilver
+- Version: 0.1.0 (build 2+)
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
+- Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
 - **Minimum deployment target is iOS 27.0** (matches iPhone 14 running iOS 27 beta).
 - Built with Swift 6 strict concurrency.
 
@@ -79,5 +87,6 @@ When secrets are present you get both artifacts: unsigned + signed.
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
 | Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
 | Install fails with OS version error | Device not on iOS 27+ | Update to iOS 27 beta |
+| Missing persona personality | Prompt file not embedded | Check Archive logs for resource warnings; fallback prompts still work |
 
 No Mac, no USB, no AltServer required after SideStore itself is installed.

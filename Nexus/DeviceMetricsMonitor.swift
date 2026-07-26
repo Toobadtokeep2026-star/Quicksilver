@@ -1,6 +1,8 @@
 import Foundation
 import Core
 
+/// Thermal and Low Power Mode monitor using ProcessInfo (public API only).
+/// Token-based observers; all delivery on the main queue.
 public final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sendable {
     public var diagnosticID: String { "device" }
 
@@ -17,37 +19,59 @@ public final class DeviceMetricsMonitor: DeviceMetricsMonitoring, @unchecked Sen
     public func start() {
         guard !isRunning else { return }
         isRunning = true
-        update()
 
-        thermalToken = NotificationCenter.default.addObserver(
-            forName: ProcessInfo.thermalStateDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in self?.update() }
+        let startOnMain = { [weak self] in
+            guard let self else { return }
+            self.update()
 
-        // Correct constant: ProcessInfo has no powerStateDidChangeNotification member.
-        // Low-power mode changes are posted as NSProcessInfoPowerStateDidChange.
-        powerToken = NotificationCenter.default.addObserver(
-            forName: .NSProcessInfoPowerStateDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in self?.update() }
+            self.thermalToken = NotificationCenter.default.addObserver(
+                forName: ProcessInfo.thermalStateDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in self?.update() }
+
+            // Correct constant: NSProcessInfoPowerStateDidChange
+            self.powerToken = NotificationCenter.default.addObserver(
+                forName: .NSProcessInfoPowerStateDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in self?.update() }
+        }
+
+        if Thread.isMainThread {
+            startOnMain()
+        } else {
+            DispatchQueue.main.async(execute: startOnMain)
+        }
     }
 
     public func stop() {
         guard isRunning else { return }
         isRunning = false
-        if let thermalToken {
-            NotificationCenter.default.removeObserver(thermalToken)
-            self.thermalToken = nil
+
+        let cleanup = { [weak self] in
+            guard let self else { return }
+            if let thermalToken = self.thermalToken {
+                NotificationCenter.default.removeObserver(thermalToken)
+                self.thermalToken = nil
+            }
+            if let powerToken = self.powerToken {
+                NotificationCenter.default.removeObserver(powerToken)
+                self.powerToken = nil
+            }
         }
-        if let powerToken {
-            NotificationCenter.default.removeObserver(powerToken)
-            self.powerToken = nil
+
+        if Thread.isMainThread {
+            cleanup()
+        } else {
+            DispatchQueue.main.async(execute: cleanup)
         }
     }
 
-    deinit { stop() }
+    deinit {
+        if let thermalToken { NotificationCenter.default.removeObserver(thermalToken) }
+        if let powerToken { NotificationCenter.default.removeObserver(powerToken) }
+    }
 
     private func update() {
         let info = ProcessInfo.processInfo

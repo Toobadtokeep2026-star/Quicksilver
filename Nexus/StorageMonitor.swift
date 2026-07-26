@@ -1,6 +1,8 @@
 import Foundation
 import Core
 
+/// Storage pressure monitor using FileManager (public API only).
+/// Samples on a timer; all state mutation and callbacks occur on the main queue.
 public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
     public var diagnosticID: String { "storage" }
 
@@ -16,8 +18,11 @@ public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
         guard !isRunning else { return }
         isRunning = true
         sample()
+
+        // Timer must be scheduled on the main run loop.
         DispatchQueue.main.async { [weak self] in
             guard let self, self.isRunning else { return }
+            self.timer?.invalidate()
             self.timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
                 self?.sample()
             }
@@ -26,21 +31,39 @@ public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
 
     public func stop() {
         isRunning = false
-        timer?.invalidate()
-        timer = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.timer?.invalidate()
+            self?.timer = nil
+        }
     }
 
-    deinit { stop() }
+    deinit {
+        timer?.invalidate()
+    }
 
     private func sample() {
         do {
             let attrs = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
             if let free = attrs[.systemFreeSize] as? NSNumber,
                let total = attrs[.systemSize] as? NSNumber {
-                availableGB = free.doubleValue / 1_073_741_824
-                totalGB = total.doubleValue / 1_073_741_824
-                onChange?(availableGB, totalGB)
+                let available = free.doubleValue / 1_073_741_824
+                let totalGB = total.doubleValue / 1_073_741_824
+
+                let apply = { [weak self] in
+                    guard let self else { return }
+                    self.availableGB = available
+                    self.totalGB = totalGB
+                    self.onChange?(available, totalGB)
+                }
+
+                if Thread.isMainThread {
+                    apply()
+                } else {
+                    DispatchQueue.main.async(execute: apply)
+                }
             }
-        } catch { }
+        } catch {
+            // Best-effort; storage sampling must never crash the app.
+        }
     }
 }

@@ -55,20 +55,33 @@ final class DependencyContainer {
 
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
         nexus.start()
+
+        logger.info("DependencyContainer ready — \(configuration.fullVersionString)", category: logger.general)
     }
 
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
     }
 
+    /// Switch persona by id. Errors are logged; callers that need the result should use the async throwing variant.
     func switchPersona(to id: String) {
-        Task {
-            try? await personaManager.switchTo(id: id)
-            nexus.updatePersonaContext(id)
+        Task { @MainActor in
+            do {
+                try await personaManager.switchTo(id: id)
+                nexus.updatePersonaContext(id)
+            } catch {
+                logger.error("Persona switch failed: \(error.localizedDescription)", category: logger.persona)
+            }
         }
     }
 
     func switchPersona(to config: PersonaConfiguration) {
         switchPersona(to: config.id)
+    }
+
+    /// Throwing variant for callers that need explicit success/failure.
+    func switchPersonaThrowing(to id: String) async throws {
+        try await personaManager.switchTo(id: id)
+        nexus.updatePersonaContext(id)
     }
 }

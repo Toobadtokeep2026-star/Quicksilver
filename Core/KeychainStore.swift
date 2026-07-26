@@ -3,6 +3,11 @@ import Security
 
 /// Minimal Keychain helper for storing sensitive configuration (API keys).
 /// Privacy-first: values never leave the device, never logged, never written to UserDefaults.
+///
+/// Accessibility: `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
+/// — Available after first device unlock, not backed up, device-only.
+/// Suitable for an API key that the app may need shortly after launch
+/// while still remaining unavailable when the device is locked.
 @MainActor
 public enum KeychainStore {
     private static let service = "com.quicksilver.keychain"

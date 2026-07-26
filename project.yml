@@ -113,6 +113,7 @@ targets:
         optional: true
     resources:
       - path: Resources          # Persona prompts must ship in the IPA
+      - path: PrivacyInfo.xcprivacy
     dependencies:
       - target: Core
       - target: Memory
@@ -125,7 +126,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
         PRODUCT_NAME: Quicksilver
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         INFOPLIST_KEY_CFBundleDisplayName: Quicksilver
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

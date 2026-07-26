@@ -1,22 +1,22 @@
 import Foundation
 
 /// Application-wide configuration.
-/// Day One: Static values. Future: load from UserDefaults, remote config, or encrypted storage.
-struct AppConfiguration: Sendable {
-    static let shared = AppConfiguration()
+/// Static values today. Future: load from UserDefaults, remote config, or encrypted storage.
+public struct AppConfiguration: Sendable {
+    public static let shared = AppConfiguration()
 
-    let appName: String
-    let version: String
-    let build: String
-    let minimumOSVersion: String
-    let privacyPolicyURL: URL?
-    let supportEmail: String
+    public let appName: String
+    public let version: String
+    public let build: String
+    public let minimumOSVersion: String
+    public let privacyPolicyURL: URL?
+    public let supportEmail: String
 
-    init(
+    public init(
         appName: String = "Quicksilver",
         version: String = "0.1.0",
-        build: String = "day1",
-        minimumOSVersion: String = "17.0",
+        build: String = "2",
+        minimumOSVersion: String = "27.0",
         privacyPolicyURL: URL? = nil,
         supportEmail: String = "support@quicksilver.local"
     ) {
@@ -28,7 +28,7 @@ struct AppConfiguration: Sendable {
         self.supportEmail = supportEmail
     }
 
-    var fullVersionString: String {
-        "\(version)-\(build)"
+    public var fullVersionString: String {
+        "\(version) (\(build))"
     }
 }

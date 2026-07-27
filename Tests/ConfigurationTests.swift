@@ -11,6 +11,6 @@ final class ConfigurationTests: XCTestCase {
 
     func testFullVersionString() {
         let config = AppConfiguration(version: "0.1.0", build: "day1")
-        XCTAssertEqual(config.fullVersionString, "0.1.0-day1")
+        XCTAssertEqual(config.fullVersionString, "0.1.0 (day1)")
     }
 }

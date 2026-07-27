@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Quicksilver",
     platforms: [
-        .iOS(.v27),
+        .iOS(.v17),
         .macOS(.v15)
     ],
     products: [

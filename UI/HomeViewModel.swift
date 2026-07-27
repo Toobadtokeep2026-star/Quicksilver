@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 import Core
 import Personas
 import Nexus
@@ -9,6 +10,7 @@ import Nexus
 final class HomeViewModel {
     private(set) var personaDisplayName: String = ""
     private(set) var personaDescription: String = ""
+    private(set) var personaAccentColor: Color = .accentColor
     private(set) var activePersonaID: String = "quicksilver"
     private(set) var availablePersonas: [PersonaConfiguration] = PersonaConfiguration.all
 
@@ -33,6 +35,8 @@ final class HomeViewModel {
         let config = container.activeConfiguration
         personaDisplayName = config.displayName
         personaDescription = config.shortDescription
+        // Colour sets live in Resources/Assets.xcassets; fall back to the app accent if absent.
+        personaAccentColor = Color(config.accentColorName, bundle: .main)
         activePersonaID = config.id
         availablePersonas = container.personaManager.availableConfigurations
 
@@ -50,9 +54,10 @@ final class HomeViewModel {
 
     func switchPersona(to id: String) {
         guard id != activePersonaID else { return }
-        container.switchPersona(to: id)
-        Task {
-            try? await Task.sleep(for: .milliseconds(120))
+        // Await the switch instead of sleeping and hoping it finished: the previous
+        // fixed 120ms delay was a race that could refresh against the old persona.
+        Task { @MainActor in
+            try? await container.switchPersonaThrowing(to: id)
             refresh()
         }
     }

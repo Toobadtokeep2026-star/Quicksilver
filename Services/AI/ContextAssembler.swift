@@ -3,16 +3,16 @@ import Core
 
 /// Assembles a compact, privacy-safe context block for the model.
 /// Pure. No network, no storage side effects.
-struct ContextAssembler: Sendable {
+public struct ContextAssembler: Sendable {
 
-    struct Input: Sendable {
-        var personaID: String?
-        var personaDisplayName: String?
-        var recentMemorySnippets: [String]
-        var latestInsightTitles: [String]
-        var deviceSummary: String?
+    public struct Input: Sendable {
+        public var personaID: String?
+        public var personaDisplayName: String?
+        public var recentMemorySnippets: [String]
+        public var latestInsightTitles: [String]
+        public var deviceSummary: String?
 
-        init(
+        public init(
             personaID: String? = nil,
             personaDisplayName: String? = nil,
             recentMemorySnippets: [String] = [],
@@ -28,7 +28,7 @@ struct ContextAssembler: Sendable {
     }
 
     /// Produce a short context string. Empty if nothing useful is available.
-    func assemble(_ input: Input, maxMemoryLines: Int = 5, maxInsightLines: Int = 3) -> String? {
+    public func assemble(_ input: Input, maxMemoryLines: Int = 5, maxInsightLines: Int = 3) -> String? {
         var lines: [String] = []
 
         if let name = input.personaDisplayName, !name.isEmpty {

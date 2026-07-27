@@ -1,7 +1,7 @@
 # Quicksilver → SideStore (iPhone-only path)
 
-**Target:** iPhone 14 / iOS 27 beta  
-**Minimum deployment target:** iOS 27.0  
+**Target:** iPhone 14 (iOS 17 or later, including iOS 27 beta)  
+**Minimum deployment target:** iOS 17.0  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
 
 ## Prerequisites
@@ -11,7 +11,7 @@
 2. LocalDevVPN installed from the App Store and connected whenever you refresh or install.  
 3. Free or paid Apple ID signed into SideStore.  
 4. GitHub account that can trigger Actions on this repository.
-5. Device running **iOS 27 beta** (or later).
+5. Device running **iOS 17.0 or later**.
 
 ## Produce the IPA (cloud) — Unsigned path (no secrets needed)
 
@@ -75,7 +75,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
-- **Minimum deployment target is iOS 27.0** (matches iPhone 14 running iOS 27 beta).
+- **Minimum deployment target is iOS 17.0** — the real API floor of this codebase (Observation, SwiftData, SwiftUI `.onChange(of:_:)`). A low floor maximises SideStore install compatibility and lets CI build with the shipping Xcode SDKs.
 - Built with Swift 6 strict concurrency.
 
 ## Failure modes
@@ -86,7 +86,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 | SideStore rejects unsigned IPA | Rare packaging issue | Re-run workflow or try signed path |
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
 | Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
-| Install fails with OS version error | Device not on iOS 27+ | Update to iOS 27 beta |
+| Install fails with OS version error | Device below iOS 17 | Update to iOS 17 or later |
 | Missing persona personality | Prompt file not embedded | Check Archive logs for resource warnings; fallback prompts still work |
 
 No Mac, no USB, no AltServer required after SideStore itself is installed.

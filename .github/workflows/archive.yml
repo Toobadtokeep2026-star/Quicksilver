@@ -97,8 +97,15 @@ jobs:
           security create-keychain -p "${KEYCHAIN_PASSWORD:-temporary}" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "${KEYCHAIN_PASSWORD:-temporary}" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          # -t agg imports both the certificate and its private key; -t cert alone drops the
+          # private key and codesign then fails with "no identity found".
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t agg -f pkcs12 \
+            -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -T /usr/bin/security
+          # Allow codesign to use the key without an interactive keychain prompt.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "${KEYCHAIN_PASSWORD:-temporary}" "$KEYCHAIN_PATH" >/dev/null
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
 
@@ -193,8 +200,10 @@ jobs:
             <string>${{ secrets.TEAM_ID }}</string>
             <key>compileBitcode</key>
             <false/>
+            <!-- project.yml sets CODE_SIGN_STYLE: Automatic; manual export would require an
+                 explicit provisioningProfiles map and fails without one. -->
             <key>signingStyle</key>
-            <string>manual</string>
+            <string>automatic</string>
           </dict>
           </plist>
           EOF
@@ -203,6 +212,7 @@ jobs:
             -archivePath build/Quicksilver.xcarchive \
             -exportOptionsPlist build/ExportOptions.plist \
             -exportPath build/ipa \
+            -allowProvisioningUpdates \
             2>&1 | tee export-signed.log
           ls -la build/ipa || true
 

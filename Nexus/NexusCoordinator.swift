@@ -116,6 +116,9 @@ public final class NexusCoordinator {
         newState.availableStorageGB = available
         newState.totalStorageGB = total
         state = newState
+        // Storage signals must also flow through the shared path so they are recorded in
+        // recentSignals, emit a DiagnosticEvent, and reach InsightEngine.
+        updateLocalState(from: signal)
     }
 
     private func handleDevice(thermal: String, lowPower: Bool) {
@@ -133,6 +136,7 @@ public final class NexusCoordinator {
         newState.thermalState = thermal
         newState.lowPowerMode = lowPower
         state = newState
+        updateLocalState(from: signal)
     }
 
     private func updateLocalState(from signal: Signal, expensive: Bool = false, constrained: Bool = false) {

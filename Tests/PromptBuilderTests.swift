@@ -1,4 +1,5 @@
 import XCTest
+import Core
 @testable import ServicesAI
 
 final class PromptBuilderTests: XCTestCase {

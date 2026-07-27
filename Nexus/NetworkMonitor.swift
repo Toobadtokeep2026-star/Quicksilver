@@ -11,7 +11,9 @@ import Core
 public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
     public var diagnosticID: String { "network" }
 
-    private let monitor = NWPathMonitor()
+    /// Recreated on every `start()`: an NWPathMonitor is single-use and stops delivering
+    /// updates permanently once `cancel()` has been called on it.
+    private var monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network", qos: .utility)
     private var isRunning = false
 
@@ -26,6 +28,7 @@ public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
         guard !isRunning else { return }
         isRunning = true
 
+        monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in
             guard let self else { return }
             let connected = path.status == .satisfied

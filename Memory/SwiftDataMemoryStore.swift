@@ -30,8 +30,11 @@ public actor SwiftDataMemoryStore: MemoryStore {
     }
 
     public func save(_ item: MemoryItem) async throws {
+        // #Predicate cannot resolve member accesses on a captured value (`item.id`);
+        // the id must be hoisted into a local before it is captured.
+        let itemID = item.id
         let descriptor = FetchDescriptor<MemoryEntry>(
-            predicate: #Predicate { $0.id == item.id }
+            predicate: #Predicate { $0.id == itemID }
         )
         if let existing = try context.fetch(descriptor).first {
             existing.update(from: item)

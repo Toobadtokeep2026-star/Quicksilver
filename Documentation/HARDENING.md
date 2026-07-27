@@ -17,7 +17,7 @@ Date: 2026-07-26 (updated after full audit remediation pass)
 - PromptManager loads external prompts with embedded fallback
 - MemoryManager: `clearAll()` + `exportJSON()`
 - Stub redirect files cleaned / neutralized
-- AppConfiguration aligned with deployment target 27.0
+- AppConfiguration aligned with deployment target 17.0
 
 ### P2 — Experience
 - PersonaEntity for typed Shortcuts / Siri selection
@@ -58,7 +58,7 @@ Remaining optional polish:
 
 ---
 
-## Device Validation Checklist (iPhone 14 / iOS 27 beta)
+## Device Validation Checklist (iPhone 14 / iOS 17+)
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact

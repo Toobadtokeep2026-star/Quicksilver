@@ -9,8 +9,6 @@ struct GrokAIProvider: AIProvider {
     private let baseURL: URL
     private let model: String
     private let session: URLSession
-    private let decoder = JSONDecoder()
-    private let encoder = JSONEncoder()
 
     init(apiKey: String, model: String = "grok-3", baseURL: URL? = nil, session: URLSession = .shared) throws {
         guard !apiKey.isEmpty else { throw AppError.apiKeyMissing }
@@ -57,7 +55,9 @@ struct GrokAIProvider: AIProvider {
             max_tokens: request.maxTokens,
             stream: false
         )
-        urlRequest.httpBody = try encoder.encode(body)
+        // JSONEncoder/JSONDecoder are reference types and are not Sendable, so they cannot be stored
+        // on this Sendable struct under Swift 6 strict concurrency. They are cheap to create per request.
+        urlRequest.httpBody = try JSONEncoder().encode(body)
 
         let data: Data
         let response: URLResponse
@@ -84,7 +84,7 @@ struct GrokAIProvider: AIProvider {
 
         let decoded: GrokAPI.ChatResponse
         do {
-            decoded = try decoder.decode(GrokAPI.ChatResponse.self, from: data)
+            decoded = try JSONDecoder().decode(GrokAPI.ChatResponse.self, from: data)
         } catch {
             throw AppError.aiRequestFailed("Failed to decode Grok response")
         }

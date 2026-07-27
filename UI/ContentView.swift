@@ -1,4 +1,6 @@
 import SwiftUI
+import Combine
+import UIKit
 import Core
 import Personas
 import Nexus
@@ -60,7 +62,9 @@ struct ContentView: View {
 
     private func personaHeader(_ vm: HomeViewModel) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(vm.personaDisplayName).font(.largeTitle.weight(.semibold))
+            Text(vm.personaDisplayName)
+                .font(.largeTitle.weight(.semibold))
+                .foregroundStyle(vm.personaAccentColor)
             Text(vm.personaDescription).font(.subheadline).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

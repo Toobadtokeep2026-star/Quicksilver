@@ -78,7 +78,7 @@ public struct PersonaDecisionPolicy: Sendable {
     private func fromTaskDescription(_ description: String?) -> PersonaConfiguration? {
         guard let text = description?.lowercased() else { return nil }
 
-        if containsAny(text, ["architect", "implement", "refactor", "debug", "fix", "fix", "precision", "structure"]) {
+        if containsAny(text, ["architect", "implement", "refactor", "debug", "fix", "precision", "structure"]) {
             return .forge
         }
         if containsAny(text, ["idea", "brainstorm", "explore", "what if", "creative", "strategy", "option"]) {

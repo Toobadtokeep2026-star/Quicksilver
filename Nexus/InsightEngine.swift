@@ -58,7 +58,9 @@ public struct InsightEngine: Sendable {
     }
 
     private func batteryInsight(signal: Signal, recent: [Signal], personaID: String) -> Insight? {
-        guard let level = signal.numericValue else { return nil }
+        // UIDevice reports -1 when the battery level is unavailable (simulator, monitoring off).
+        // Without this guard the app renders nonsense such as "Battery is at -100%".
+        guard let level = signal.numericValue, level >= 0 else { return nil }
 
         if level < 0.15 && signal.value != "charging" {
             return make(

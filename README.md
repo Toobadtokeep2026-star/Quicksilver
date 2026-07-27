@@ -2,7 +2,7 @@
 
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
-**Target:** iPhone 14 / **iOS 27 beta** (minimum deployment target 27.0)
+**Target:** iPhone 14 — **iOS 17.0+** (minimum deployment target 17.0)
 
 ```
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
@@ -54,9 +54,9 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
-Requires Xcode with iOS 27 SDK.
+Requires Xcode 15.4 or later (iOS 17 SDK).
 
-## On-device (iPhone 14 / iOS 27 beta) — SideStore path
+## On-device (iPhone 14 / iOS 17+) — SideStore path
 
 Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
 

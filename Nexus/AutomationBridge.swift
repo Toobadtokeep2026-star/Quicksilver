@@ -18,13 +18,10 @@ public final class AutomationBridge: @unchecked Sendable {
 
     public init() {}
 
+    /// Call with no argument to mark the bridge configured without a coordinator.
+    /// (The previous no-argument overload was ambiguous with this default-argument form.)
     public func configure(nexus: NexusCoordinator? = nil) {
         self.nexus = nexus
-        isConfigured = true
-    }
-
-    /// Convenience used by NexusCoordinator.start()
-    public func configure() {
         isConfigured = true
     }
 

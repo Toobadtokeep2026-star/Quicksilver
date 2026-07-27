@@ -55,7 +55,9 @@ public struct MemoryItem: Identifiable, Codable, Sendable, Equatable {
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
         metadata = try c.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
-        importance = try c.decodeIfPresent(Double.self, forKey: .importance) ?? 0.5
+        // Clamp on decode to preserve the same 0...1 invariant the memberwise initialiser enforces.
+        let decodedImportance = try c.decodeIfPresent(Double.self, forKey: .importance) ?? 0.5
+        importance = min(max(decodedImportance, 0), 1)
         personaScope = try c.decodeIfPresent(String.self, forKey: .personaScope)
     }
 }

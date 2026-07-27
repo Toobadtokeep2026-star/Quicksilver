@@ -1,0 +1,52 @@
+default_platform(:ios)
+
+APP_SCHEME = "Quicksilver"
+APP_BUNDLE_ID = "com.quicksilver.app"
+SIMULATOR_DESTINATION = "platform=iOS Simulator,name=iPhone 16"
+
+lane :build do
+  sh("xcodegen generate")
+  xcodebuild(
+    scheme: APP_SCHEME,
+    destination: SIMULATOR_DESTINATION,
+    derived_data_path: "build",
+    code_signing_allowed: false,
+    build_for_testing: true
+  )
+end
+
+lane :test do
+  sh("xcodegen generate")
+  xcodebuild(
+    scheme: APP_SCHEME,
+    destination: SIMULATOR_DESTINATION,
+    derived_data_path: "build",
+    code_signing_allowed: false,
+    enable_code_coverage: true,
+    test: true
+  )
+end
+
+lane :beta do
+  sh("xcodegen generate")
+
+  api_key = app_store_connect_api_key(
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+    key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"),
+    in_house: false
+  )
+
+  build_app(
+    scheme: APP_SCHEME,
+    project: "Quicksilver.xcodeproj",
+    derived_data_path: "build",
+    export_method: "app-store",
+    skip_profile_detection: false
+  )
+
+  upload_to_testflight(
+    api_key: api_key,
+    skip_waiting_for_build_processing: true
+  )
+end

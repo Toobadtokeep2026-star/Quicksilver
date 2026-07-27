@@ -15,8 +15,8 @@ public struct AppConfiguration: Sendable {
     public init(
         appName: String = "Quicksilver",
         version: String = "0.1.0",
-        build: String = "2",
-        minimumOSVersion: String = "27.0",
+        build: String = "3",
+        minimumOSVersion: String = "18.0",
         privacyPolicyURL: URL? = nil,
         supportEmail: String = "support@quicksilver.local"
     ) {

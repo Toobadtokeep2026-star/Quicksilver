@@ -29,6 +29,13 @@ enum InsightPresenter {
                 action: insight.suggestedAction,
                 styleLabel: "Eternal"
             )
+        case "quicksilver":
+            return Display(
+                title: insight.title,
+                body: quicksilverBody(insight.body),
+                action: insight.suggestedAction,
+                styleLabel: "Quicksilver"
+            )
         default:
             return Display(
                 title: insight.title,
@@ -51,5 +58,17 @@ enum InsightPresenter {
             return body + " Consider continuity with prior context."
         }
         return body + ". Consider continuity with prior context."
+    }
+
+    /// Light verbal edge — sharp, not theatrical.
+    private static func quicksilverBody(_ body: String) -> String {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return body }
+
+        // Keep it dry and cutting rather than adding long flourishes.
+        if trimmed.hasSuffix(".") {
+            return trimmed + " Obvious, once you look."
+        }
+        return trimmed + ". Obvious, once you look."
     }
 }

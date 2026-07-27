@@ -4,9 +4,9 @@ import Core
 
 @MainActor
 @Observable
-final class AIService {
-    private(set) var isProcessing = false
-    private(set) var lastResponse: AIResponse?
+public final class AIService {
+    public private(set) var isProcessing = false
+    public private(set) var lastResponse: AIResponse?
 
     private var provider: AIProvider
     private let eventBus: EventBus
@@ -15,9 +15,9 @@ final class AIService {
     private let promptBuilder = PromptBuilder()
     private let contextAssembler = ContextAssembler()
 
-    static let apiKeyKeychainAccount = "xai.apiKey"
+    public static let apiKeyKeychainAccount = "xai.apiKey"
 
-    init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
+    public init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
         self.eventBus = eventBus
         self.logger = logger
         self.featureFlags = featureFlags
@@ -41,12 +41,12 @@ final class AIService {
         return MockAIProvider()
     }
 
-    func setProvider(_ newProvider: AIProvider) {
+    public func setProvider(_ newProvider: AIProvider) {
         provider = newProvider
         logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
 
-    func configureAPIKey(_ key: String?) {
+    public func configureAPIKey(_ key: String?) {
         if let key, !key.isEmpty {
             KeychainStore.set(key, forKey: Self.apiKeyKeychainAccount)
             if featureFlags.isEnabled("aiServiceEnabled"), let grok = GrokAIProvider.make(apiKey: key) {
@@ -58,13 +58,13 @@ final class AIService {
         }
     }
 
-    var currentProviderID: String { provider.id }
-    var currentProviderName: String { provider.displayName }
+    public var currentProviderID: String { provider.id }
+    public var currentProviderName: String { provider.displayName }
 
     // MARK: - Preferred entry point
 
     /// Persona-aware completion. Views pass user text + optional context fragments only.
-    func complete(
+    public func complete(
         userMessage: String,
         personaSystemPrompt: String,
         preferredTemperature: Double = 0.7,
@@ -89,7 +89,7 @@ final class AIService {
 
     // MARK: - Legacy / low-level
 
-    func complete(prompt: String, systemPrompt: String? = nil, temperature: Double = 0.7, maxTokens: Int = 1024) async throws -> AIResponse {
+    public func complete(prompt: String, systemPrompt: String? = nil, temperature: Double = 0.7, maxTokens: Int = 1024) async throws -> AIResponse {
         try await execute(prompt: prompt, systemPrompt: systemPrompt, temperature: temperature, maxTokens: maxTokens)
     }
 

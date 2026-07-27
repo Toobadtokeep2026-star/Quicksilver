@@ -1,6 +1,6 @@
 # Quicksilver Hardening Report & Roadmap
 
-Date: 2026-07-26 (updated after full audit remediation pass)
+Date: 2026-07-27 (updated after production-readiness audit)
 
 ## Completed Hardening + Sprint
 
@@ -17,18 +17,18 @@ Date: 2026-07-26 (updated after full audit remediation pass)
 - PromptManager loads external prompts with embedded fallback
 - MemoryManager: `clearAll()` + `exportJSON()`
 - Stub redirect files cleaned / neutralized
-- AppConfiguration aligned with deployment target 27.0
+- AppConfiguration / Package.swift / project.yml aligned on **iOS 18.0** deployment target
 
 ### P2 — Experience
 - PersonaEntity for typed Shortcuts / Siri selection
 - Memory lifecycle tests
 - InsightPresenter: persona-aware tone applied only at presentation time
 
-### CI / SideStore path (2026-07-26)
+### CI / SideStore path
 - Archive IPA workflow verifies `.app` existence, persona prompt presence, and IPA structure
 - Clearer Xcode selection with explicit failure if none found
 - Structure job now requires PrivacyInfo.xcprivacy
-- Build number bumped to 2
+- Build number at 3
 
 ### Architecture invariants preserved
 - Sense → Think → Express
@@ -46,7 +46,7 @@ Date: 2026-07-26 (updated after full audit remediation pass)
 ### Milestone 3 — Memory System → Done (UI + decay + export)
 ### Milestone 4 — AI Integration → Largely done (cancellation, prompts, Mock path)
 ### Milestone 5 — Polished UI / Personality → In progress (InsightPresenter landed)
-### Milestone 6 — SideStore production hardening → In progress (Privacy Manifest + CI verification landed)
+### Milestone 6 — SideStore production hardening → Largely done (Privacy Manifest + CI verification + docs alignment)
 
 Remaining optional polish:
 - Stronger pure Observation (further reduce any remaining timers)
@@ -58,7 +58,7 @@ Remaining optional polish:
 
 ---
 
-## Device Validation Checklist (iPhone 14 / iOS 27 beta)
+## Device Validation Checklist (iPhone 14+ / iOS 18+)
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact

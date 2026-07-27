@@ -1,17 +1,22 @@
 # Quicksilver → SideStore (iPhone-only path)
 
-**Target:** iPhone 14+ / iOS 18.0+  
-**Minimum deployment target:** iOS 18.0  
+**Primary device:** iPhone 14 / **iOS 27**  
+**Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
+
+## Why the deployment target is not 27.0 yet
+
+GitHub-hosted `macos-15` runners currently ship Xcode 16 / iOS 18 SDK. Setting `IPHONEOS_DEPLOYMENT_TARGET = 27.0` would make every Archive job fail until an Xcode with the iOS 27 SDK is available on the runner. A lower deployment target is the standard, correct way to keep producing SideStore IPAs that still run on newer OS versions.
+
+When CI gains an iOS 27 SDK, raise `Package.swift`, `project.yml`, and `AppConfiguration.minimumOSVersion` together.
 
 ## Prerequisites
 
 1. SideStore (or SideStore + LiveContainer) already installed and working on the device.  
-   If not yet installed, follow the pure on-device bootstrap (SideInstaller → SideStore).  
 2. LocalDevVPN installed from the App Store and connected whenever you refresh or install.  
 3. Free or paid Apple ID signed into SideStore.  
 4. GitHub account that can trigger Actions on this repository.
-5. Device running **iOS 18.0** or later.
+5. Device running **iOS 27** (or any version ≥ the build floor).
 
 ## Produce the IPA (cloud) — Unsigned path (no secrets needed)
 
@@ -24,7 +29,7 @@
 
 The workflow always builds for generic iOS device with code signing disabled and packages a proper unsigned IPA (`Payload/Quicksilver.app`). SideStore will re-sign it with your Apple ID when you install.
 
-Post-build checks now verify:
+Post-build checks verify:
 - `Quicksilver.app` exists
 - Persona prompt files are present (or warn if missing)
 - PrivacyInfo.xcprivacy is present (or warn)
@@ -32,7 +37,7 @@ Post-build checks now verify:
 
 ### Optional: Signed IPA (better reliability)
 
-If you later add these repository secrets (Settings → Secrets and variables → Actions), the same workflow will also produce a development-signed IPA:
+If you add these repository secrets (Settings → Secrets and variables → Actions), the same workflow will also produce a development-signed IPA:
 
 | Secret | Purpose |
 |--------|---------|
@@ -52,7 +57,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 4. Trust the new developer profile if prompted (Settings → General → VPN & Device Management).
 5. Launch Quicksilver.
 
-## First-run checklist
+## First-run checklist (iOS 27)
 
 1. Settings → paste your xAI API key → enable AI Service.
 2. Home → confirm persona switcher and Nexus health.
@@ -71,11 +76,11 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 - Bundle ID: `com.quicksilver.app`
 - Display name: Quicksilver
-- Version: 0.1.0 (build 3+)
+- Version: 0.1.0 (build 4+)
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
-- **Minimum deployment target is iOS 18.0** (matches Package.swift, project.yml, and AppConfiguration).
+- Build floor: iOS 18.0 | Primary validation device: iOS 27
 - Built with Swift 6 strict concurrency.
 
 ## Failure modes
@@ -86,7 +91,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 | SideStore rejects unsigned IPA | Rare packaging issue | Re-run workflow or try signed path |
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
 | Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
-| Install fails with OS version error | Device below iOS 18 | Update device |
+| Install fails with OS version error | Extremely rare for lower-floor binary on higher OS | Re-download IPA / check SideStore logs |
 | Missing persona personality | Prompt file not embedded | Check Archive logs for resource warnings; fallback prompts still work |
 
 No Mac, no USB, no AltServer required after SideStore itself is installed.

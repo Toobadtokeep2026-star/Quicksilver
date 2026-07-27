@@ -126,7 +126,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
         PRODUCT_NAME: Quicksilver
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "3"
+        CURRENT_PROJECT_VERSION: "4"
         INFOPLIST_KEY_CFBundleDisplayName: Quicksilver
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -134,8 +134,10 @@ targets:
         INFOPLIST_KEY_LSRequiresIPhoneOS: YES
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
-        # SideStore-friendly: no private entitlements, public APIs only
-        # CI builds against iOS 18 SDK (runner). Device goal remains iOS 27 when SDK available.
+        # SideStore-friendly: no private entitlements, public APIs only.
+        # Build floor = iOS 18.0 (current CI SDK). Primary validation device = iOS 27.
+        # A lower deployment target is intentional so unsigned IPAs can be produced
+        # on macos-15 / Xcode 16 runners and still install + run on iOS 27.
 
   QuicksilverTests:
     type: bundle.unit-test

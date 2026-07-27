@@ -2,7 +2,8 @@
 
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
-**Target:** iPhone 14+ / **iOS 18.0+** (deployment target 18.0; Swift 6 strict concurrency)
+**Primary device target:** iPhone 14 / **iOS 27**  
+**Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.
 
 ```
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
@@ -27,7 +28,7 @@ Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhon
 
 ## Status
 
-SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). Primary validation device is iOS 27. See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
 
@@ -54,9 +55,9 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
-Requires Xcode 16+ with iOS 18 SDK.
+Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
 
-## On-device (iPhone 14+) — SideStore path
+## On-device (iPhone 14 / iOS 27) — SideStore path
 
 Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
 

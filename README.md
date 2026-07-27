@@ -26,9 +26,25 @@ Produces an unsigned IPA by default (SideStore re-signs). Optional signed path a
 
 Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
+## Releasing
+
+Releases are tag-driven. Push a `v*.*.*` tag to `main` and the **Release** workflow runs:
+
+1. Unit tests with code coverage on an iPhone 16 simulator.
+2. If App Store Connect secrets are present → Fastlane `beta` lane archives and uploads to **TestFlight**.
+3. If secrets are absent → builds an **unsigned IPA** for SideStore.
+4. Creates a GitHub Release with auto-generated Conventional Commits notes and attaches the IPA.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Fastlane lanes (`fastlane/Fastfile`): `build`, `test`, `beta`.
+
 ## Status
 
-SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). Primary validation device is iOS 27. See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). Release workflow + Fastlane lanes added. Primary validation device is iOS 27. See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
 
@@ -53,6 +69,7 @@ brew install xcodegen
 xcodegen generate
 open Quicksilver.xcodeproj
 # or: swift test
+# or: fastlane test
 ```
 
 Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.

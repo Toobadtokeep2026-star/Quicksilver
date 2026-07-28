@@ -1,6 +1,6 @@
 # Quicksilver Hardening Report & Roadmap
 
-Date: 2026-07-27 (production-readiness audit + iOS 27 device alignment)
+Date: 2026-07-28 (cleanup / refine / polish pass + prior production-readiness audit)
 
 ## Device / OS policy
 
@@ -19,7 +19,6 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - BatteryMonitor / NetworkMonitor / StorageMonitor / DeviceMetricsMonitor: main-queue delivery, token-based observers, explicit lifecycle
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
 - LoggerService: redaction helper for API keys / long tokens
-- SystemMonitor & AutomationManager: marked deprecated
 - **PrivacyInfo.xcprivacy** added and embedded in the app target
 - DependencyContainer: structured persona switch with error logging
 
@@ -27,12 +26,14 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - Persona prompts externalized to `Resources/Personas/*.txt`
 - PromptManager loads external prompts with embedded fallback
 - MemoryManager: `clearAll()` + `exportJSON()`
-- Stub redirect files cleaned / neutralized
+- **Redirect stubs removed** (`Services/AI/AIRequest`, `AIResponse`, `PromptManager`; `Memory/MemoryItem`)
+- **Deprecated placeholders removed** (`SystemMonitor`, `AutomationManager`)
+- InsightEngine: personaID is an optional traceability tag only; generation is persona-agnostic
 - AppConfiguration documents both build floor (18) and primary device (27)
 
 ### P2 — Experience
 - PersonaEntity for typed Shortcuts / Siri selection
-- Memory lifecycle tests
+- Memory lifecycle tests + expanded MemoryScorer + NexusIntelligence coverage
 - InsightPresenter: persona-aware tone applied only at presentation time
 
 ### CI / SideStore path
@@ -58,6 +59,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### Milestone 4 — AI Integration → Largely done (cancellation, prompts, Mock path)
 ### Milestone 5 — Polished UI / Personality → In progress (InsightPresenter landed)
 ### Milestone 6 — SideStore production hardening → Largely done
+### Cleanup / refine / polish → Done (this pass)
 
 Remaining optional polish:
 - Stronger pure Observation (further reduce any remaining timers)

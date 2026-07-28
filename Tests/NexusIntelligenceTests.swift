@@ -22,6 +22,13 @@ final class NexusIntelligenceTests: XCTestCase {
         XCTAssertEqual(signal.numericValue!, 0.42, accuracy: 0.01)
     }
 
+    func testStorageSignal() {
+        let processor = SignalProcessor()
+        let signal = processor.storageSignal(availableGB: 3.2, totalGB: 128)
+        XCTAssertEqual(signal.source, .storage)
+        XCTAssertEqual(signal.numericValue!, 3.2, accuracy: 0.01)
+    }
+
     // MARK: - Insight engine (persona-agnostic)
 
     func testInsightGenerationForDisconnect() {
@@ -31,6 +38,16 @@ final class NexusIntelligenceTests: XCTestCase {
         XCTAssertNotNil(insight)
         XCTAssertEqual(insight?.severity, .warning)
         XCTAssertEqual(insight?.personaStyle, "quicksilver")
+        XCTAssertEqual(insight?.title, "Network lost")
+    }
+
+    func testInsightWithoutPersonaTag() {
+        let engine = InsightEngine()
+        let signal = Signal(source: .network, category: .connectivity, value: "disconnected")
+        let insight = engine.insight(for: signal, recent: [])
+        XCTAssertNotNil(insight)
+        XCTAssertEqual(insight?.personaStyle, "")
+        XCTAssertEqual(insight?.title, "Network lost")
     }
 
     func testInsightTagsPersonaStyleOnly() {
@@ -44,9 +61,11 @@ final class NexusIntelligenceTests: XCTestCase {
         XCTAssertEqual(forgeInsight?.personaStyle, "forge")
         // Body must remain neutral (no "Technical:" prefix or similar)
         XCTAssertFalse(forgeInsight?.body.contains("Technical:") ?? true)
+        XCTAssertEqual(forgeInsight?.body, "The device is currently offline.")
 
         let eternalInsight = engine.insight(for: signal, recent: [], personaID: "eternal")
         XCTAssertEqual(eternalInsight?.personaStyle, "eternal")
+        XCTAssertEqual(eternalInsight?.body, forgeInsight?.body)
     }
 
     func testLowBatteryInsight() {
@@ -63,6 +82,40 @@ final class NexusIntelligenceTests: XCTestCase {
         XCTAssertTrue(insight?.title.lowercased().contains("low battery") ?? false)
     }
 
+    func testStoragePressureInsight() {
+        let engine = InsightEngine()
+        let signal = Signal(
+            source: .storage,
+            category: .capacity,
+            value: "low",
+            numericValue: 1.5
+        )
+        let insight = engine.insight(for: signal, recent: [])
+        XCTAssertNotNil(insight)
+        XCTAssertEqual(insight?.severity, .warning)
+        XCTAssertTrue(insight?.title.lowercased().contains("storage") ?? false)
+    }
+
+    func testThermalCriticalInsight() {
+        let engine = InsightEngine()
+        let signal = Signal(
+            source: .device,
+            category: .performance,
+            value: "critical"
+        )
+        let insight = engine.insight(for: signal, recent: [])
+        XCTAssertNotNil(insight)
+        XCTAssertEqual(insight?.severity, .warning)
+        XCTAssertTrue(insight?.title.lowercased().contains("thermal") ?? false)
+    }
+
+    func testNoInsightForHealthyNetwork() {
+        let engine = InsightEngine()
+        let signal = Signal(source: .network, category: .connectivity, value: "satisfied")
+        let insight = engine.insight(for: signal, recent: [])
+        XCTAssertNil(insight)
+    }
+
     // MARK: - Full path: signal → insight → state
 
     func testFullSignalToInsightToStatePath() {
@@ -74,8 +127,6 @@ final class NexusIntelligenceTests: XCTestCase {
         nexus.start()
         XCTAssertTrue(nexus.state.isActive)
 
-        // Simulate a disconnect signal path manually through the public state mutation surface
-        // (monitors are live; we exercise the insight + append path that the handlers use)
         let processor = SignalProcessor()
         let engine = InsightEngine()
 
@@ -129,5 +180,19 @@ final class NexusIntelligenceTests: XCTestCase {
         state.overallHealthScore = scores.reduce(0, +) / max(scores.count, 1)
 
         XCTAssertEqual(state.overallHealthScore, 31)
+    }
+
+    func testInsightHistoryCapped() {
+        var state = NexusState()
+        for i in 0..<25 {
+            let insight = Insight(
+                title: "t\(i)",
+                body: "b",
+                personaStyle: ""
+            )
+            state.appendInsight(insight, maxHistory: 20)
+        }
+        XCTAssertEqual(state.recentInsights.count, 20)
+        XCTAssertEqual(state.recentInsights.first?.title, "t24")
     }
 }

@@ -2,12 +2,12 @@ import Foundation
 
 /// Runtime environment classification.
 /// Used by FeatureFlags and services to alter behavior without hardcoding.
-enum AppEnvironment: String, Sendable, CaseIterable {
+public enum AppEnvironment: String, Sendable, CaseIterable {
     case development
     case staging
     case production
 
-    static var current: AppEnvironment {
+    public static var current: AppEnvironment {
         #if DEBUG
         return .development
         #else
@@ -15,5 +15,5 @@ enum AppEnvironment: String, Sendable, CaseIterable {
         #endif
     }
 
-    var isDebug: Bool { self == .development }
+    public var isDebug: Bool { self == .development }
 }

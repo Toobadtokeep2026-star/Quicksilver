@@ -80,7 +80,7 @@ final class PersonaManagerTests: XCTestCase {
 
     func testEnvironmentalFallbackStillWorks() {
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(isLowPower: true, batteryLevel: 0.12)
+        let context = PersonaContext(batteryLevel: 0.12, isLowPower: true)
         let result = policy.preferredPersona(
             current: .quicksilver,
             lastSwitchedAt: nil,

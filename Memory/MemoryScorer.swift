@@ -3,7 +3,7 @@ import Core
 
 /// Lightweight, pure importance scorer + decay.
 /// Keeps scoring deterministic and testable.
-enum MemoryScorer {
+public enum MemoryScorer {
 
     private static let categoryBase: [MemoryItem.Category: Double] = [
         .system: 0.85,
@@ -22,7 +22,7 @@ enum MemoryScorer {
         .system: 180
     ]
 
-    static func score(
+    public static func score(
         category: MemoryItem.Category,
         value: String,
         explicitBoost: Double? = nil,
@@ -46,7 +46,7 @@ enum MemoryScorer {
 
     /// Returns a decayed importance value based on time since last update.
     /// Pure function — does not mutate the stored item.
-    static func decayedImportance(for item: MemoryItem, now: Date = Date()) -> Double {
+    public static func decayedImportance(for item: MemoryItem, now: Date = Date()) -> Double {
         let halfLife = halfLifeDays[item.category] ?? 14
         let ageDays = max(now.timeIntervalSince(item.updatedAt) / 86_400, 0)
         // Exponential decay: importance * 0.5^(age/halfLife)

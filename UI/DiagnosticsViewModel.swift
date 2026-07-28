@@ -52,7 +52,6 @@ final class DiagnosticsViewModel {
         refreshTask = nil
     }
 
-    deinit {
-        refreshTask?.cancel()
-    }
+    // deinit must not touch MainActor-isolated state under Swift 6.
+    // Callers should invoke stopLiveRefresh() from onDisappear.
 }

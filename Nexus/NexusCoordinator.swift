@@ -166,6 +166,7 @@ public final class NexusCoordinator {
         )
         newState.appendEvent(event)
 
+        // personaID is a traceability tag only; InsightEngine generation is persona-agnostic.
         if let insight = insightEngine.insight(for: signal, recent: newState.recentSignals, personaID: currentPersonaID) {
             newState.appendInsight(insight)
             logger.info("Insight: \(insight.title)", category: logger.nexus)

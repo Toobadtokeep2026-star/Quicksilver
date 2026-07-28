@@ -13,7 +13,7 @@ final class MemoryStoreTests: XCTestCase {
 
         XCTAssertEqual(loaded.count, 1)
         XCTAssertEqual(loaded.first?.key, "test.key")
-        XCTAssertEqual(loaded.first?.importance, 0.8, accuracy: 0.001)
+        XCTAssertEqual(loaded.first!.importance, 0.8, accuracy: 0.001)
     }
 
     func testInMemoryUpdate() async throws {
@@ -28,7 +28,7 @@ final class MemoryStoreTests: XCTestCase {
         let loaded = try await store.loadAll()
         XCTAssertEqual(loaded.count, 1)
         XCTAssertEqual(loaded.first?.value, "v2")
-        XCTAssertEqual(loaded.first?.importance, 0.9, accuracy: 0.001)
+        XCTAssertEqual(loaded.first!.importance, 0.9, accuracy: 0.001)
     }
 
     func testInMemoryDelete() async throws {

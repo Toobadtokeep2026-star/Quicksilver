@@ -9,9 +9,22 @@ final class MemoryScorerTests: XCTestCase {
         XCTAssertLessThan(score, 0.5)
     }
 
+    func testBaseScoreForProjectHigherThanTemporary() {
+        let temp = MemoryScorer.score(category: .temporary, value: "note")
+        let project = MemoryScorer.score(category: .project, value: "note")
+        XCTAssertGreaterThan(project, temp)
+    }
+
     func testExplicitBoostWins() {
         let score = MemoryScorer.score(category: .temporary, value: "x", explicitBoost: 0.9)
         XCTAssertEqual(score, 0.9, accuracy: 0.01)
+    }
+
+    func testExplicitBoostClamped() {
+        let over = MemoryScorer.score(category: .preference, value: "x", explicitBoost: 1.5)
+        XCTAssertLessThanOrEqual(over, 1.0)
+        let under = MemoryScorer.score(category: .preference, value: "x", explicitBoost: -0.2)
+        XCTAssertGreaterThanOrEqual(under, 0.0)
     }
 
     func testDecayReducesImportanceOverTime() {
@@ -37,5 +50,17 @@ final class MemoryScorerTests: XCTestCase {
         )
         let decayed = MemoryScorer.decayedImportance(for: fresh)
         XCTAssertEqual(decayed, 0.7, accuracy: 0.05)
+    }
+
+    func testExistingImportanceBlendedOnUpdate() {
+        let score = MemoryScorer.score(
+            category: .conversation,
+            value: "updated note",
+            explicitBoost: nil,
+            existing: 0.9
+        )
+        // Should not collapse fully to base; existing influence retained
+        XCTAssertGreaterThan(score, 0.4)
+        XCTAssertLessThanOrEqual(score, 1.0)
     }
 }

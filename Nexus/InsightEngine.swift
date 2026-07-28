@@ -1,10 +1,13 @@
 import Foundation
 
 /// Produces insights from signals. Persona-agnostic — voice is applied at presentation time.
+/// `personaStyle` on Insight is an optional tag only; generation never varies by persona.
 public struct InsightEngine: Sendable {
     public init() {}
 
-    public func insight(for signal: Signal, recent: [Signal], personaID: String) -> Insight? {
+    /// - Parameter personaID: Optional tag stored on the Insight for traceability.
+    ///   Does not influence title, body, severity, or action. Presentation applies voice.
+    public func insight(for signal: Signal, recent: [Signal], personaID: String = "") -> Insight? {
         switch signal.source {
         case .network: return networkInsight(signal: signal, recent: recent, personaID: personaID)
         case .battery: return batteryInsight(signal: signal, recent: recent, personaID: personaID)

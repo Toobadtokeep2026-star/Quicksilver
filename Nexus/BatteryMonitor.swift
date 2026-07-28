@@ -28,11 +28,10 @@ public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
         isRunning = true
 
         #if canImport(UIKit)
-        // UIDevice battery APIs must be used on the main thread.
         if Thread.isMainThread {
-            enableAndObserve()
+            MainActor.assumeIsolated { enableAndObserve() }
         } else {
-            DispatchQueue.main.async { [weak self] in self?.enableAndObserve() }
+            Task { @MainActor in self.enableAndObserve() }
         }
         #endif
     }
@@ -42,28 +41,15 @@ public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
         isRunning = false
 
         #if canImport(UIKit)
-        let cleanup = { [weak self] in
-            guard let self else { return }
-            if let levelToken = self.levelToken {
-                NotificationCenter.default.removeObserver(levelToken)
-                self.levelToken = nil
-            }
-            if let stateToken = self.stateToken {
-                NotificationCenter.default.removeObserver(stateToken)
-                self.stateToken = nil
-            }
-            UIDevice.current.isBatteryMonitoringEnabled = false
-        }
         if Thread.isMainThread {
-            cleanup()
+            MainActor.assumeIsolated { cleanupObservers() }
         } else {
-            DispatchQueue.main.async(execute: cleanup)
+            Task { @MainActor in self.cleanupObservers() }
         }
         #endif
     }
 
     deinit {
-        // Best-effort; deinit may not be on main.
         #if canImport(UIKit)
         if let levelToken { NotificationCenter.default.removeObserver(levelToken) }
         if let stateToken { NotificationCenter.default.removeObserver(stateToken) }
@@ -71,6 +57,7 @@ public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
     }
 
     #if canImport(UIKit)
+    @MainActor
     private func enableAndObserve() {
         UIDevice.current.isBatteryMonitoringEnabled = true
 
@@ -78,17 +65,35 @@ public final class BatteryMonitor: BatteryMonitoring, @unchecked Sendable {
             forName: UIDevice.batteryLevelDidChangeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in self?.update() }
+        ) { [weak self] _ in
+            Task { @MainActor in self?.update() }
+        }
 
         stateToken = NotificationCenter.default.addObserver(
             forName: UIDevice.batteryStateDidChangeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in self?.update() }
+        ) { [weak self] _ in
+            Task { @MainActor in self?.update() }
+        }
 
         update()
     }
 
+    @MainActor
+    private func cleanupObservers() {
+        if let levelToken {
+            NotificationCenter.default.removeObserver(levelToken)
+            self.levelToken = nil
+        }
+        if let stateToken {
+            NotificationCenter.default.removeObserver(stateToken)
+            self.stateToken = nil
+        }
+        UIDevice.current.isBatteryMonitoringEnabled = false
+    }
+
+    @MainActor
     private func update() {
         let device = UIDevice.current
         level = Double(device.batteryLevel)

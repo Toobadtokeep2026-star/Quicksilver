@@ -3,8 +3,8 @@ import Foundation
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct PersonaEntity: AppEntity {
-    public static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Persona")
-    public static var defaultQuery = PersonaEntityQuery()
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Persona")
+    public static let defaultQuery = PersonaEntityQuery()
 
     public var id: String
     public var displayName: String

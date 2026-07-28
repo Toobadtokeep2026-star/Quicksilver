@@ -8,9 +8,9 @@ import ServicesAI
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetCurrentPersonaIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Get Current Persona"
-    public static var description = IntentDescription("Returns the persona currently active in Quicksilver (autonomously chosen or overridden).")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Get Current Persona"
+    public static let description = IntentDescription("Returns the persona currently active in Quicksilver (autonomously chosen or overridden).")
+    public static let openAppWhenRun: Bool = false
 
     public init() {}
 
@@ -29,9 +29,9 @@ public struct GetCurrentPersonaIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ForcePersonaIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Force Persona"
-    public static var description = IntentDescription("Manually override the autonomous persona selection. Use sparingly.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Force Persona"
+    public static let description = IntentDescription("Manually override the autonomous persona selection. Use sparingly.")
+    public static let openAppWhenRun: Bool = false
 
     @Parameter(title: "Persona", description: "forge, quicksilver, or eternal")
     public var personaID: String
@@ -55,9 +55,9 @@ public struct ForcePersonaIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct CaptureMemoryIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Remember This"
-    public static var description = IntentDescription("Capture a short note or thought into Quicksilver Memory.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Remember This"
+    public static let description = IntentDescription("Capture a short note or thought into Quicksilver Memory.")
+    public static let openAppWhenRun: Bool = false
 
     @Parameter(title: "Content")
     public var content: String
@@ -103,9 +103,9 @@ public struct CaptureMemoryIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetContextIntent: AppIntent {
-    public static var title: LocalizedStringResource = "What\'s the Context"
-    public static var description = IntentDescription("Returns a short summary of current Quicksilver state (persona + health signals).")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "What\'s the Context"
+    public static let description = IntentDescription("Returns a short summary of current Quicksilver state (persona + health signals).")
+    public static let openAppWhenRun: Bool = false
 
     public init() {}
 
@@ -127,9 +127,9 @@ public struct GetContextIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ReportStatusIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Report Quicksilver Status"
-    public static var description = IntentDescription("Full diagnostic report from Nexus (network, battery, health).")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Report Quicksilver Status"
+    public static let description = IntentDescription("Full diagnostic report from Nexus (network, battery, health).")
+    public static let openAppWhenRun: Bool = false
 
     public init() {}
 
@@ -147,9 +147,9 @@ public struct ReportStatusIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Ask Nexus"
-    public static var description = IntentDescription("Send a short query to the Quicksilver intelligence layer.")
-    public static var openAppWhenRun: Bool = false
+    public static let title: LocalizedStringResource = "Ask Nexus"
+    public static let description = IntentDescription("Send a short query to the Quicksilver intelligence layer.")
+    public static let openAppWhenRun: Bool = false
 
     @Parameter(title: "Query")
     public var query: String

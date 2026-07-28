@@ -227,7 +227,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             intent: GetContextIntent(),
             phrases: [
                 "What\'s the context in \(.applicationName)",
-                "Quicksilver status"
+                "Status for \(.applicationName)"
             ],
             shortTitle: "Context",
             systemImageName: "info.circle"
@@ -235,7 +235,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: ReportStatusIntent(),
             phrases: [
-                "Report Quicksilver status",
+                "Report status in \(.applicationName)",
                 "Full diagnostics from \(.applicationName)"
             ],
             shortTitle: "Full Status",
@@ -253,7 +253,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: QueryNexusIntent(query: ""),
             phrases: [
-                "Ask Nexus",
+                "Ask Nexus in \(.applicationName)",
                 "Ask \(.applicationName)"
             ],
             shortTitle: "Ask Nexus",

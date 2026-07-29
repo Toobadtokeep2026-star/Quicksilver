@@ -50,10 +50,14 @@ final class HomeViewModel {
 
     func switchPersona(to id: String) {
         guard id != activePersonaID else { return }
-        container.switchPersona(to: id)
         Task {
-            try? await Task.sleep(for: .milliseconds(120))
-            refresh()
+            do {
+                try await container.switchPersonaThrowing(to: id)
+                refresh()
+            } catch {
+                // Error already logged in DependencyContainer / PersonaManager.
+                refresh()
+            }
         }
     }
 }

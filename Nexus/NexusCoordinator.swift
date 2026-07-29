@@ -116,6 +116,9 @@ public final class NexusCoordinator {
         newState.availableStorageGB = available
         newState.totalStorageGB = total
         state = newState
+        // Must feed updateLocalState so storage signals reach recentSignals,
+        // DiagnosticEvents, and InsightEngine (storageInsight was previously dead).
+        updateLocalState(from: signal)
     }
 
     private func handleDevice(thermal: String, lowPower: Bool) {
@@ -133,6 +136,8 @@ public final class NexusCoordinator {
         newState.thermalState = thermal
         newState.lowPowerMode = lowPower
         state = newState
+        // Same path as storage: device/thermal insights require updateLocalState.
+        updateLocalState(from: signal)
     }
 
     private func updateLocalState(from signal: Signal, expensive: Bool = false, constrained: Bool = false) {

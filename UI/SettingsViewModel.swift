@@ -25,9 +25,6 @@ final class SettingsViewModel {
         hasStoredKey = !(key?.isEmpty ?? true)
         providerName = container.aiService.currentProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
-        if hasStoredKey && apiKeyDraft.isEmpty {
-            apiKeyDraft = ""
-        }
     }
 
     func saveAPIKey() {
@@ -38,7 +35,13 @@ final class SettingsViewModel {
             return
         }
 
-        container.aiService.configureAPIKey(trimmed)
+        let saved = container.aiService.configureAPIKey(trimmed)
+        guard saved else {
+            statusMessage = "Could not save the key to the Keychain."
+            statusIsError = true
+            return
+        }
+
         apiKeyDraft = ""
         refresh()
 

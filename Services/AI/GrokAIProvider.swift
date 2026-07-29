@@ -9,8 +9,6 @@ struct GrokAIProvider: AIProvider {
     private let baseURL: URL
     private let model: String
     private let session: URLSession
-    private let decoder = JSONDecoder()
-    private let encoder = JSONEncoder()
 
     init(apiKey: String, model: String = "grok-3", baseURL: URL? = nil, session: URLSession = .shared) throws {
         guard !apiKey.isEmpty else { throw AppError.apiKeyMissing }
@@ -57,6 +55,10 @@ struct GrokAIProvider: AIProvider {
             max_tokens: request.maxTokens,
             stream: false
         )
+
+        // Construct coders per-request: JSONEncoder/Decoder are not Sendable.
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
         urlRequest.httpBody = try encoder.encode(body)
 
         let data: Data

@@ -61,7 +61,8 @@ public struct InsightEngine: Sendable {
     }
 
     private func batteryInsight(signal: Signal, recent: [Signal], personaID: String) -> Insight? {
-        guard let level = signal.numericValue else { return nil }
+        // UIDevice.batteryLevel is -1 when monitoring is unavailable (simulator, first tick).
+        guard let level = signal.numericValue, level >= 0 else { return nil }
 
         if level < 0.15 && signal.value != "charging" {
             return make(
@@ -75,7 +76,7 @@ public struct InsightEngine: Sendable {
         }
 
         let previous = recent.first { $0.source == .battery && $0.id != signal.id }
-        if let prevLevel = previous?.numericValue, prevLevel - level > 0.08 {
+        if let prevLevel = previous?.numericValue, prevLevel >= 0, prevLevel - level > 0.08 {
             return make(
                 title: "Elevated drain",
                 body: "Battery dropped faster than usual in the recent window.",

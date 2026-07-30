@@ -23,15 +23,17 @@ public actor SwiftDataMemoryStore: MemoryStore {
 
     public func loadAll() async throws -> [MemoryItem] {
         let descriptor = FetchDescriptor<MemoryEntry>(
-            sortBy: [SortDescriptor(\MemoryEntry.updatedAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.MemoryEntry.updatedAt, order: .reverse)]
         )
         let entries = try context.fetch(descriptor)
         return entries.map { $0.toMemoryItem() }
     }
 
     public func save(_ item: MemoryItem) async throws {
+        // Hoist id: #Predicate cannot lower member access on a captured struct.
+        let itemID = item.id
         let descriptor = FetchDescriptor<MemoryEntry>(
-            predicate: #Predicate { $0.id == item.id }
+            predicate: #Predicate { $0.id == itemID }
         )
         if let existing = try context.fetch(descriptor).first {
             existing.update(from: item)

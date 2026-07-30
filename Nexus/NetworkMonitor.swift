@@ -8,10 +8,13 @@ import Core
 /// before mutating state or invoking onChange so callers can safely assume
 /// main-thread delivery. `@unchecked Sendable` is required because the
 /// underlying Network framework types are not Sendable.
+///
+/// Lifecycle: `NWPathMonitor` is single-use after `cancel()`. `start()` always
+/// constructs a fresh monitor so stop → start cycles (backgrounding, Nexus restart) work.
 public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
     public var diagnosticID: String { "network" }
 
-    private let monitor = NWPathMonitor()
+    private var monitor: NWPathMonitor?
     private let queue = DispatchQueue(label: "com.quicksilver.nexus.network", qos: .utility)
     private var isRunning = false
 
@@ -26,7 +29,10 @@ public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
         guard !isRunning else { return }
         isRunning = true
 
-        monitor.pathUpdateHandler = { [weak self] path in
+        let pathMonitor = NWPathMonitor()
+        monitor = pathMonitor
+
+        pathMonitor.pathUpdateHandler = { [weak self] path in
             guard let self else { return }
             let connected = path.status == .satisfied
             let expensive = path.isExpensive
@@ -40,17 +46,18 @@ public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
                 self.onChange?(connected, expensive, constrained)
             }
         }
-        monitor.start(queue: queue)
+        pathMonitor.start(queue: queue)
     }
 
     public func stop() {
         guard isRunning else { return }
         isRunning = false
-        monitor.cancel()
-        monitor.pathUpdateHandler = nil
+        monitor?.cancel()
+        monitor?.pathUpdateHandler = nil
+        monitor = nil
     }
 
     deinit {
-        monitor.cancel()
+        monitor?.cancel()
     }
 }

@@ -46,15 +46,23 @@ public final class AIService {
         logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
 
-    public func configureAPIKey(_ key: String?) {
+    /// Persists the API key and switches provider. Returns `false` if Keychain write failed.
+    @discardableResult
+    public func configureAPIKey(_ key: String?) -> Bool {
         if let key, !key.isEmpty {
-            KeychainStore.set(key, forKey: Self.apiKeyKeychainAccount)
+            let saved = KeychainStore.set(key, forKey: Self.apiKeyKeychainAccount)
+            if !saved {
+                logger.error("Keychain write failed for API key", category: logger.ai)
+                return false
+            }
             if featureFlags.isEnabled("aiServiceEnabled"), let grok = GrokAIProvider.make(apiKey: key) {
                 setProvider(grok)
             }
+            return true
         } else {
             KeychainStore.delete(forKey: Self.apiKeyKeychainAccount)
             setProvider(MockAIProvider())
+            return true
         }
     }
 

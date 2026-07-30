@@ -18,13 +18,9 @@ public final class AutomationBridge: @unchecked Sendable {
 
     public init() {}
 
+    /// Attach the coordinator. Default argument supports tests that only need the configured flag.
     public func configure(nexus: NexusCoordinator? = nil) {
         self.nexus = nexus
-        isConfigured = true
-    }
-
-    /// Convenience used by NexusCoordinator.start()
-    public func configure() {
         isConfigured = true
     }
 

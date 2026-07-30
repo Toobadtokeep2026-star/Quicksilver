@@ -28,7 +28,11 @@ final class DependencyContainer {
         self.logger = LoggerService()
         self.eventBus = EventBus()
 
-        self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
+        self.personaManager = PersonaManager(
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
 
         let memoryStore: MemoryStore
         if let swiftDataStore = try? SwiftDataMemoryStore() {

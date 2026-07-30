@@ -11,6 +11,7 @@ final class HomeViewModel {
     private(set) var personaDescription: String = ""
     private(set) var activePersonaID: String = "quicksilver"
     private(set) var availablePersonas: [PersonaConfiguration] = PersonaConfiguration.all
+    private(set) var lastSwitchReason: String?
 
     private(set) var isNexusActive: Bool = false
     private(set) var overallHealthScore: Int = 100
@@ -35,6 +36,7 @@ final class HomeViewModel {
         personaDescription = config.shortDescription
         activePersonaID = config.id
         availablePersonas = container.personaManager.availableConfigurations
+        lastSwitchReason = container.personaManager.lastSwitchReason
 
         let state = container.nexus.state
         isNexusActive = state.isActive

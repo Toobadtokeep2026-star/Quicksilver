@@ -117,6 +117,20 @@ public final class MemoryManager {
         logger.info("Memory cleared by user request", category: logger.memory)
     }
 
+    /// Removes items whose importance is strictly below `threshold`.
+    /// Callers supply the threshold (e.g. from MemoryPolicy) so Memory stays free of Personas.
+    @discardableResult
+    public func pruneBelow(importance threshold: Double) async -> Int {
+        let victims = items.filter { $0.importance < threshold }
+        for item in victims {
+            await delete(id: item.id)
+        }
+        if !victims.isEmpty {
+            logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory)
+        }
+        return victims.count
+    }
+
     public func exportJSON() throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

@@ -62,6 +62,11 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(vm.personaDisplayName).font(.largeTitle.weight(.semibold))
             Text(vm.personaDescription).font(.subheadline).foregroundStyle(.secondary)
+            if let reason = vm.lastSwitchReason {
+                Text("Switched: \(reason)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()

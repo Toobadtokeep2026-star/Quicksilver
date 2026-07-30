@@ -10,6 +10,8 @@ final class SettingsViewModel {
     private(set) var hasStoredKey: Bool = false
     private(set) var providerName: String = ""
     private(set) var aiEnabled: Bool = false
+    private(set) var personaAutonomyEnabled: Bool = true
+    private(set) var lastSwitchReason: String?
     private(set) var statusMessage: String?
     private(set) var statusIsError: Bool = false
 
@@ -25,6 +27,8 @@ final class SettingsViewModel {
         hasStoredKey = !(key?.isEmpty ?? true)
         providerName = container.aiService.currentProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
+        personaAutonomyEnabled = container.featureFlags.isEnabled("personaAutonomy")
+        lastSwitchReason = container.personaManager.lastSwitchReason
         if hasStoredKey && apiKeyDraft.isEmpty {
             apiKeyDraft = ""
         }
@@ -72,6 +76,13 @@ final class SettingsViewModel {
         }
         refresh()
         statusMessage = enabled ? "AI Service enabled" : "AI Service disabled (Mock only)"
+        statusIsError = false
+    }
+
+    func setPersonaAutonomy(_ enabled: Bool) {
+        container.featureFlags.set("personaAutonomy", enabled: enabled)
+        refresh()
+        statusMessage = enabled ? "Persona autonomy enabled" : "Persona autonomy disabled (manual only)"
         statusIsError = false
     }
 }

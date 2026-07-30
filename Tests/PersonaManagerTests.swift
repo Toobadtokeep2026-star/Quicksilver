@@ -20,6 +20,7 @@ final class PersonaManagerTests: XCTestCase {
         let manager = PersonaManager(eventBus: bus, logger: logger)
         try await manager.switchTo(id: "forge")
         XCTAssertEqual(manager.activeConfiguration.id, "forge")
+        XCTAssertEqual(manager.lastSwitchReason, "explicit override")
     }
 
     func testSwitchToUnknownThrows() async {
@@ -30,6 +31,28 @@ final class PersonaManagerTests: XCTestCase {
             try await manager.switchTo(id: "nonexistent")
             XCTFail("Expected error")
         } catch { }
+    }
+
+    func testAutonomyDisabledDoesNotAutoSwitch() async throws {
+        let bus = EventBus()
+        let logger = LoggerService()
+        let flags = FeatureFlags()
+        flags.set("personaAutonomy", enabled: false)
+
+        let manager = PersonaManager(
+            eventBus: bus,
+            logger: logger,
+            policy: PersonaDecisionPolicy(minimumDwellSeconds: 0),
+            featureFlags: flags
+        )
+
+        // Seed a context that would normally prefer Forge
+        manager.updateTaskContext(kind: .building)
+        // Allow any scheduled Task to run
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(manager.activeConfiguration.id, "quicksilver")
+        XCTAssertNil(manager.lastSwitchReason)
     }
 
     // MARK: - Context-aware Decision Policy

@@ -4,6 +4,11 @@ import Core
 
 /// Owns persona lifecycle and switching.
 /// Conforms to Core.PersonaEngine so other modules depend only on the contract.
+///
+/// EventBus subscription is app-lifetime by design: both PersonaManager and EventBus
+/// live for the process duration (wired from DependencyContainer). Unsubscribe is
+/// intentionally omitted; if this manager is ever scoped shorter, call
+/// `eventBus.unsubscribe(subscriptionID)` in a teardown path.
 @MainActor
 @Observable
 public final class PersonaManager: PersonaEngine {
@@ -13,6 +18,7 @@ public final class PersonaManager: PersonaEngine {
     private let logger: LoggerService
     private let available: [PersonaConfiguration]
     private let policy: PersonaDecisionPolicy
+    private let featureFlags: FeatureFlags?
 
     private var latestFocusName: String?
     private var latestTimePeriod: EventBus.TimePeriod?
@@ -32,13 +38,15 @@ public final class PersonaManager: PersonaEngine {
         available: [PersonaConfiguration] = PersonaConfiguration.all,
         eventBus: EventBus,
         logger: LoggerService,
-        policy: PersonaDecisionPolicy = PersonaDecisionPolicy()
+        policy: PersonaDecisionPolicy = PersonaDecisionPolicy(),
+        featureFlags: FeatureFlags? = nil
     ) {
         self.state = PersonaState(configuration: initial)
         self.available = available
         self.eventBus = eventBus
         self.logger = logger
         self.policy = policy
+        self.featureFlags = featureFlags
 
         Task { @MainActor in
             let id = await eventBus.subscribe { [weak self] event in
@@ -49,8 +57,6 @@ public final class PersonaManager: PersonaEngine {
             self.subscriptionID = id
         }
     }
-
-    // No deinit unsubscribe: manager is app-lifetime; EventBus is also long-lived.
 
     public var activePersonaID: String {
         state.configuration.id
@@ -66,6 +72,11 @@ public final class PersonaManager: PersonaEngine {
 
     public var activeMemoryPolicy: MemoryPolicy {
         MemoryPolicy.policy(for: activePersonaID)
+    }
+
+    /// Most recent switch reason, if any (e.g. "explicit override", "autonomous (battery pressure)").
+    public var lastSwitchReason: String? {
+        state.lastSwitchReason
     }
 
     public func switchTo(id: String) async throws {
@@ -116,7 +127,13 @@ public final class PersonaManager: PersonaEngine {
         }
     }
 
+    private var isAutonomyEnabled: Bool {
+        featureFlags?.isEnabled("personaAutonomy") ?? true
+    }
+
     private func evaluateAutonomy(reason: String) {
+        guard isAutonomyEnabled else { return }
+
         let context = PersonaContext(
             taskDescription: latestTaskDescription,
             taskKind: latestTaskKind,
@@ -146,6 +163,7 @@ public final class PersonaManager: PersonaEngine {
 
         var newState = PersonaState(configuration: config)
         newState.lastSwitchedAt = Date()
+        newState.lastSwitchReason = reason
         state = newState
 
         logger.info("Switched persona to \(config.displayName) [\(reason)]", category: logger.persona)

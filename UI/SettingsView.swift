@@ -33,6 +33,20 @@ struct SettingsView: View {
                 Text("Keys are stored in the device Keychain (AfterFirstUnlockThisDeviceOnly). They are never written to UserDefaults or logs.")
             }
 
+            Section {
+                Toggle("Persona Autonomy", isOn: Binding(
+                    get: { vm.personaAutonomyEnabled },
+                    set: { vm.setPersonaAutonomy($0) }
+                ))
+                if let reason = vm.lastSwitchReason {
+                    LabeledContent("Last switch", value: reason)
+                }
+            } header: {
+                Text("Personas")
+            } footer: {
+                Text("When enabled, Quicksilver may switch personas based on task, battery, thermal, and time context. Manual switches always work.")
+            }
+
             Section("xAI API Key") {
                 SecureField("Paste xAI API key", text: Binding(
                     get: { vm.apiKeyDraft },

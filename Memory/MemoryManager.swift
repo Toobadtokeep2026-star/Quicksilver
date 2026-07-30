@@ -82,8 +82,6 @@ public final class MemoryManager {
         }
     }
 
-    /// Policy-aware query. Callers pass retention threshold explicitly so Memory
-    /// does not depend on the Personas module.
     public func items(matching query: MemoryQuery, retentionThreshold: Double? = nil) -> [MemoryItem] {
         var effective = query
         if let retentionThreshold, effective.minimumImportance == nil {
@@ -115,6 +113,19 @@ public final class MemoryManager {
         }
         items.removeAll()
         logger.info("Memory cleared by user request", category: logger.memory)
+    }
+
+    /// Removes items whose importance is strictly below `threshold`.
+    @discardableResult
+    public func pruneBelow(importance threshold: Double) async -> Int {
+        let victims = items.filter { $0.importance < threshold }
+        for item in victims {
+            await delete(id: item.id)
+        }
+        if !victims.isEmpty {
+            logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory)
+        }
+        return victims.count
     }
 
     public func exportJSON() throws -> String {

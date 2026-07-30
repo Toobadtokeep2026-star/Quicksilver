@@ -28,7 +28,11 @@ final class DependencyContainer {
         self.logger = LoggerService()
         self.eventBus = EventBus()
 
-        self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
+        self.personaManager = PersonaManager(
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
 
         let memoryStore: MemoryStore
         if let swiftDataStore = try? SwiftDataMemoryStore() {
@@ -63,7 +67,6 @@ final class DependencyContainer {
         personaManager.activeConfiguration
     }
 
-    /// Switch persona by id. Errors are logged; callers that need the result should use the async throwing variant.
     func switchPersona(to id: String) {
         Task { @MainActor in
             do {
@@ -79,7 +82,6 @@ final class DependencyContainer {
         switchPersona(to: config.id)
     }
 
-    /// Throwing variant for callers that need explicit success/failure.
     func switchPersonaThrowing(to id: String) async throws {
         try await personaManager.switchTo(id: id)
         nexus.updatePersonaContext(id)

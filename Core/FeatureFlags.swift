@@ -23,6 +23,7 @@ public final class FeatureFlags {
 
     private static let defaultFlags: [String: Bool] = [
         "personaSwitching": true,
+        "personaAutonomy": true,
         "memoryPersistence": true,
         "aiServiceEnabled": false,
         "nexusDetailedMetrics": false,

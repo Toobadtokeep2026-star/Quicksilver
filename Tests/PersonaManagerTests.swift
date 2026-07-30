@@ -5,8 +5,6 @@ import XCTest
 @MainActor
 final class PersonaManagerTests: XCTestCase {
 
-    // MARK: - Explicit API
-
     func testInitialPersonaIsQuicksilver() {
         let bus = EventBus()
         let logger = LoggerService()
@@ -20,6 +18,7 @@ final class PersonaManagerTests: XCTestCase {
         let manager = PersonaManager(eventBus: bus, logger: logger)
         try await manager.switchTo(id: "forge")
         XCTAssertEqual(manager.activeConfiguration.id, "forge")
+        XCTAssertEqual(manager.lastSwitchReason, "explicit override")
     }
 
     func testSwitchToUnknownThrows() async {
@@ -32,7 +31,25 @@ final class PersonaManagerTests: XCTestCase {
         } catch { }
     }
 
-    // MARK: - Context-aware Decision Policy
+    func testAutonomyDisabledDoesNotAutoSwitch() async throws {
+        let bus = EventBus()
+        let logger = LoggerService()
+        let flags = FeatureFlags()
+        flags.set("personaAutonomy", enabled: false)
+
+        let manager = PersonaManager(
+            eventBus: bus,
+            logger: logger,
+            policy: PersonaDecisionPolicy(minimumDwellSeconds: 0),
+            featureFlags: flags
+        )
+
+        manager.updateTaskContext(kind: .building)
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(manager.activeConfiguration.id, "quicksilver")
+        XCTAssertNil(manager.lastSwitchReason)
+    }
 
     func testTaskKindBuildingPrefersForge() {
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
@@ -101,7 +118,6 @@ final class PersonaManagerTests: XCTestCase {
     }
 
     func testTaskContextBeatsTimeOfDay() {
-        // Even at night, an explicit building task should win
         let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
         let context = PersonaContext(
             taskKind: .building,

@@ -6,6 +6,8 @@ public struct PersonaState: Sendable, Equatable {
     public var sessionStart: Date
     public var interactionCount: Int
     public var lastSwitchedAt: Date?
+    /// Human-readable reason for the most recent switch (explicit or autonomous).
+    public var lastSwitchReason: String?
 
     public var id: String { configuration.id }
     public var displayName: String { configuration.displayName }
@@ -15,6 +17,7 @@ public struct PersonaState: Sendable, Equatable {
         self.sessionStart = Date()
         self.interactionCount = 0
         self.lastSwitchedAt = nil
+        self.lastSwitchReason = nil
     }
 
     public mutating func recordInteraction() {

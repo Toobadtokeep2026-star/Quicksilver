@@ -41,11 +41,11 @@ Core owns the shared contracts and foundational models. All other modules depend
 
 | Protocol | Purpose | Implemented by |
 |----------|---------|----------------|
-| `AIProvider` | Language-model backends | MockAIProvider, GrokAIProvider |
-| `MemoryStore` | Persistent memory | UserDefaultsMemoryStore (SwiftData later) |
-| `DiagnosticProvider` | Device / environment sensors | NetworkMonitor, BatteryMonitor, … |
-| `PersonaEngine` | Persona selection & influence | PersonaManager |
-| `AutomationProvider` | App Intents / Shortcuts surface | AutomationManager |
+| `AIProvider` | Language-model backends | `MockAIProvider`, `GrokAIProvider` |
+| `MemoryStore` | Persistent memory | `SwiftDataMemoryStore` (preferred), `UserDefaultsMemoryStore` (fallback) |
+| `DiagnosticProvider` | Device / environment sensors | `NetworkMonitor`, `BatteryMonitor`, `StorageMonitor`, `DeviceMetricsMonitor` |
+| `PersonaEngine` | Persona selection & influence | `PersonaManager` |
+| `AutomationProvider` | App Intents / Shortcuts surface | `AutomationBridge` (Nexus) + `QuicksilverIntents` |
 
 Everything communicates through these protocols. Managers and coordinators must not become god objects.
 
@@ -58,7 +58,7 @@ Foundational models (`AIRequest`, `AIResponse`, `MemoryItem`, `AppError`, …), 
 Identity, reasoning style, tone, priorities, memory policy, decision policy. Does not own networking, storage, or UI.
 
 **Nexus**  
-Diagnostics, sensors, device signals, insight generation. Does not decide personality responses.
+Diagnostics, sensors, device signals, insight generation. Does not decide personality responses. Publishes time-of-day and pressure events onto EventBus for persona autonomy.
 
 **Memory**  
 Persistent context and user continuity. Storage backends are replaceable behind `MemoryStore`.

@@ -59,7 +59,12 @@ final class SignalPipeline {
 
         case .device:
             await eventBus.publish(.thermalPressureChanged(state: signal.value))
-            if signal.metadata["lowPower"] == "true" || signal.value.lowercased().contains("low power") {
+            // Accept either metadata key (processor emits both; older paths may only set one).
+            let lowPowerFlag =
+                signal.metadata["lowPower"] == "true"
+                || signal.metadata["lowPowerMode"] == "true"
+                || signal.value.lowercased().contains("low power")
+            if lowPowerFlag {
                 await eventBus.publish(.batteryPressureChanged(level: signal.numericValue ?? 0.15, isLowPower: true))
             }
 

@@ -23,7 +23,7 @@ public actor SwiftDataMemoryStore: MemoryStore {
 
     public func loadAll() async throws -> [MemoryItem] {
         let descriptor = FetchDescriptor<MemoryEntry>(
-            sortBy: [SortDescriptor(\.MemoryEntry.updatedAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
         let entries = try context.fetch(descriptor)
         return entries.map { $0.toMemoryItem() }

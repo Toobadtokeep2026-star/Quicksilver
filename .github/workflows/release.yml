@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release (TestFlight + SideStore IPA)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          echo "Available Xcode apps:"
+          ls /Applications | grep -i xcode || true
+
+          SELECTED=""
+          for candidate in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode_16.1.app \
+            /Applications/Xcode_16.0.app \
+            /Applications/Xcode_15.4.app \
+            /Applications/Xcode.app
+          do
+            if [[ -d "$candidate" ]]; then
+              SELECTED="$candidate"
+              break
+            fi
+          done
+
+          if [[ -z "$SELECTED" ]]; then
+            echo "::error::No usable Xcode installation found on runner"
+            exit 1
+          fi
+
+          sudo xcode-select -s "$SELECTED"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen || brew upgrade xcodegen || true
+
+      - name: Install Fastlane
+        run: brew install fastlane || brew upgrade fastlane || true
+
+      - name: Generate Xcode project
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          test -d Quicksilver.xcodeproj
+          echo "Project generated successfully."
+
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -scheme Quicksilver \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/test.log
+
+      - name: Check signing secrets
+        id: signing
+        run: |
+          if [[ -n "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" && \
+                -n "${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}" && \
+                -n "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" ]]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets present — Fastlane beta lane will upload to TestFlight."
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "No signing secrets — producing unsigned IPA for SideStore only."
+          fi
+
+      - name: Configure Fastlane secrets
+        if: steps.signing.outputs.signed == 'true'
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Fastlane beta (TestFlight upload)
+        if: steps.signing.outputs.signed == 'true'
+        run: fastlane beta
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+
+      - name: Archive unsigned IPA for SideStore
+        if: steps.signing.outputs.signed == 'false'
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -scheme Quicksilver \
+            -archivePath build/Quicksilver.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | tee build/archive.log
+
+          mkdir -p build/Payload
+          cp -R build/Quicksilver.xcarchive/Products/Applications/Quicksilver.app build/Payload/
+          cd build
+          zip -r Quicksilver-unsigned.ipa Payload
+          echo "Unsigned IPA: $(pwd)/Quicksilver-unsigned.ipa"
+          ls -lh Quicksilver-unsigned.ipa
+
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            build/Quicksilver-unsigned.ipa
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-${{ github.ref_name }}
+          path: |
+            build/*.log
+            build/*.ipa
+            build/test.log
+          retention-days: 30

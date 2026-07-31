@@ -53,7 +53,13 @@ struct ContentView: View {
             }
             .padding()
         }
-        .onAppear { vm.refresh() }
+        .onAppear {
+            vm.refresh()
+            vm.startLiveRefresh()
+        }
+        .onDisappear {
+            vm.stopLiveRefresh()
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             vm.refresh()
         }

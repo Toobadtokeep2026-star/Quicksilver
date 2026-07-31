@@ -24,6 +24,7 @@ final class HomeViewModel {
     private(set) var latestInsight: Insight?
 
     private let container: DependencyContainer
+    private var refreshTask: Task<Void, Never>?
 
     init(container: DependencyContainer) {
         self.container = container
@@ -60,5 +61,23 @@ final class HomeViewModel {
                 refresh()
             }
         }
+    }
+
+    /// Keeps Home metrics/insights in sync while the screen is visible.
+    /// Matches DiagnosticsViewModel live-refresh pattern (lightweight snapshot poll).
+    func startLiveRefresh(interval: Duration = .seconds(3)) {
+        stopLiveRefresh()
+        refreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                guard !Task.isCancelled else { break }
+                self?.refresh()
+            }
+        }
+    }
+
+    func stopLiveRefresh() {
+        refreshTask?.cancel()
+        refreshTask = nil
     }
 }

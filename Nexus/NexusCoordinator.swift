@@ -19,6 +19,9 @@ public final class NexusCoordinator {
     private let eventBus: EventBus
     private var currentPersonaID: String = "quicksilver"
     private var isRunning = false
+    private var timeContextTask: Task<Void, Never>?
+    private var lastPublishedPeriod: EventBus.TimePeriod?
+    private var personaSubscriptionID: UUID?
 
     public init(
         networkMonitor: NetworkMonitoring = NetworkMonitor(),
@@ -75,7 +78,8 @@ public final class NexusCoordinator {
         storageMonitor.start()
         deviceMonitor.start()
 
-        Task { await publishCurrentTimeContext() }
+        subscribeToPersonaChanges()
+        startTimeContextLoop()
     }
 
     public func stop() {
@@ -86,6 +90,16 @@ public final class NexusCoordinator {
         newState.isActive = false
         state = newState
 
+        timeContextTask?.cancel()
+        timeContextTask = nil
+        lastPublishedPeriod = nil
+
+        if let personaSubscriptionID {
+            let id = personaSubscriptionID
+            self.personaSubscriptionID = nil
+            Task { await eventBus.unsubscribe(id) }
+        }
+
         networkMonitor.stop()
         batteryMonitor.stop()
         storageMonitor.stop()
@@ -95,6 +109,25 @@ public final class NexusCoordinator {
 
     public func updatePersonaContext(_ personaID: String) {
         currentPersonaID = personaID
+    }
+
+    // MARK: - Persona context sync
+
+    /// Keep insight tags aligned with PersonaManager for *all* switch paths
+    /// (UI, autonomy, App Intents). Nexus only depends on Core EventBus.
+    private func subscribeToPersonaChanges() {
+        Task { [weak self] in
+            guard let self else { return }
+            let id = await self.eventBus.subscribe { [weak self] event in
+                guard case .personaDidChange(let personaID) = event else { return }
+                Task { @MainActor in
+                    self?.updatePersonaContext(personaID)
+                }
+            }
+            await MainActor.run {
+                self.personaSubscriptionID = id
+            }
+        }
     }
 
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {
@@ -128,7 +161,7 @@ public final class NexusCoordinator {
                 id: signal.id, source: signal.source, category: signal.category,
                 timestamp: signal.timestamp, value: signal.value,
                 numericValue: signal.numericValue, confidence: signal.confidence,
-                metadata: signal.metadata.merging(["lowPower": "true"]) { _, new in new }
+                metadata: signal.metadata.merging(["lowPower": "true", "lowPowerMode": "true"]) { _, new in new }
             )
         }
         pipeline.ingest(signal)
@@ -180,7 +213,24 @@ public final class NexusCoordinator {
         state = newState
     }
 
-    private func publishCurrentTimeContext() async {
+    // MARK: - Time context (persona autonomy)
+
+    /// Publishes time-of-day on start and whenever the period crosses an hour boundary.
+    /// Previously only fired once at start, so autonomy never saw morning → afternoon transitions.
+    private func startTimeContextLoop() {
+        timeContextTask?.cancel()
+        timeContextTask = Task { [weak self] in
+            await self?.publishCurrentTimeContext(force: true)
+            while !Task.isCancelled {
+                // Check every 60s; only publish when the period actually changes.
+                try? await Task.sleep(for: .seconds(60))
+                guard !Task.isCancelled else { break }
+                await self?.publishCurrentTimeContext(force: false)
+            }
+        }
+    }
+
+    private func publishCurrentTimeContext(force: Bool) async {
         let hour = Calendar.current.component(.hour, from: Date())
         let period: EventBus.TimePeriod
         switch hour {
@@ -190,6 +240,8 @@ public final class NexusCoordinator {
         case 17..<21: period = .evening
         default: period = .night
         }
+        guard force || lastPublishedPeriod != period else { return }
+        lastPublishedPeriod = period
         await eventBus.publish(.timeContextDidChange(period: period))
     }
 }

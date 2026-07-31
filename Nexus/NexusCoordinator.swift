@@ -21,6 +21,7 @@ public final class NexusCoordinator {
     private var isRunning = false
     private var timeContextTask: Task<Void, Never>?
     private var lastPublishedPeriod: EventBus.TimePeriod?
+    private var personaSubscriptionID: UUID?
 
     public init(
         networkMonitor: NetworkMonitoring = NetworkMonitor(),
@@ -77,6 +78,7 @@ public final class NexusCoordinator {
         storageMonitor.start()
         deviceMonitor.start()
 
+        subscribeToPersonaChanges()
         startTimeContextLoop()
     }
 
@@ -92,6 +94,12 @@ public final class NexusCoordinator {
         timeContextTask = nil
         lastPublishedPeriod = nil
 
+        if let personaSubscriptionID {
+            let id = personaSubscriptionID
+            self.personaSubscriptionID = nil
+            Task { await eventBus.unsubscribe(id) }
+        }
+
         networkMonitor.stop()
         batteryMonitor.stop()
         storageMonitor.stop()
@@ -101,6 +109,25 @@ public final class NexusCoordinator {
 
     public func updatePersonaContext(_ personaID: String) {
         currentPersonaID = personaID
+    }
+
+    // MARK: - Persona context sync
+
+    /// Keep insight tags aligned with PersonaManager for *all* switch paths
+    /// (UI, autonomy, App Intents). Nexus only depends on Core EventBus.
+    private func subscribeToPersonaChanges() {
+        Task { [weak self] in
+            guard let self else { return }
+            let id = await self.eventBus.subscribe { [weak self] event in
+                guard case .personaDidChange(let personaID) = event else { return }
+                Task { @MainActor in
+                    self?.updatePersonaContext(personaID)
+                }
+            }
+            await MainActor.run {
+                self.personaSubscriptionID = id
+            }
+        }
     }
 
     private func handleNetwork(connected: Bool, expensive: Bool, constrained: Bool) {

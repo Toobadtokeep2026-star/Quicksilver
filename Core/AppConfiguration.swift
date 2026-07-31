@@ -20,7 +20,7 @@ public struct AppConfiguration: Sendable {
     public init(
         appName: String = "Quicksilver",
         version: String = "0.1.0",
-        build: String = "4",
+        build: String = "5",
         minimumOSVersion: String = "18.0",
         primaryDeviceOSVersion: String = "27.0",
         privacyPolicyURL: URL? = nil,

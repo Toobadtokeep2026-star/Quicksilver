@@ -2,7 +2,11 @@
 
 **Primary device:** iPhone 14 / **iOS 27**  
 **Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
+**Current ship:** 0.1.0 (build **5**)  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
+
+> **Mandatory distribution path:** `Actions → Archive IPA → Run workflow` → download **Quicksilver-unsigned-IPA** → install in SideStore.  
+> Fastlane / TestFlight (if present) is optional and never replaces this path.
 
 ## Why the deployment target is not 27.0 yet
 
@@ -60,11 +64,12 @@ When secrets are present you get both artifacts: unsigned + signed.
 ## First-run checklist (iOS 27)
 
 1. Settings → paste your xAI API key → enable AI Service.
-2. Home → confirm persona switcher and Nexus health.
+2. Home → confirm persona switcher and Nexus health (metrics update live while on screen).
 3. Diagnostics → live signals appear.
 4. Memory → add a note, swipe delete, Clear All, Export.
 5. Ask → send a message with the active persona.
-6. Background the app 5–10 minutes, then return — state should survive.
+6. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status.
+7. Background the app 5–10 minutes, then return — state should survive.
 
 ## Refresh / reinstall
 
@@ -76,12 +81,13 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 - Bundle ID: `com.quicksilver.app`
 - Display name: Quicksilver
-- Version: 0.1.0 (build 4+)
+- Version: **0.1.0 (build 5)**
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
 - Build floor: iOS 18.0 | Primary validation device: iOS 27
 - Built with Swift 6 strict concurrency.
+- Memory is warm-loaded at launch so Ask / Intents work without opening Memory first.
 
 ## Failure modes
 

@@ -60,6 +60,10 @@ final class DependencyContainer {
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
         nexus.start()
 
+        // SideStore first-run: warm memory so Ask / Intents / Home don't wait
+        // for MemoryView to open. Failures are logged inside MemoryManager.
+        Task { await memoryManager.load() }
+
         logger.info("DependencyContainer ready — \(configuration.fullVersionString)", category: logger.general)
     }
 

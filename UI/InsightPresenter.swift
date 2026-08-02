@@ -17,7 +17,7 @@ enum InsightPresenter {
         switch personaID.lowercased() {
         case "forge":
             return Display(
-                title: insight.title,
+                title: forgeTitle(insight.title),
                 body: forgeBody(insight.body),
                 action: insight.suggestedAction.map { "Next: \($0)" },
                 styleLabel: "Forge"
@@ -26,14 +26,14 @@ enum InsightPresenter {
             return Display(
                 title: insight.title,
                 body: eternalBody(insight.body),
-                action: insight.suggestedAction,
+                action: insight.suggestedAction.map { "Hold: \($0)" },
                 styleLabel: "Eternal"
             )
         case "quicksilver":
             return Display(
                 title: insight.title,
                 body: quicksilverBody(insight.body),
-                action: insight.suggestedAction,
+                action: insight.suggestedAction.map { "Move: \($0)" },
                 styleLabel: "Quicksilver"
             )
         default:
@@ -46,26 +46,38 @@ enum InsightPresenter {
         }
     }
 
-    private static func forgeBody(_ body: String) -> String {
-        if body.hasSuffix(".") {
-            return body + " Assess impact before acting."
-        }
-        return body + ". Assess impact before acting."
+    // MARK: - Forge — precise, structural
+
+    private static func forgeTitle(_ title: String) -> String {
+        title
     }
+
+    private static func forgeBody(_ body: String) -> String {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return body }
+        if trimmed.hasSuffix(".") {
+            return trimmed + " Assess impact before acting."
+        }
+        return trimmed + ". Assess impact before acting."
+    }
+
+    // MARK: - Eternal — continuity, long horizon
 
     private static func eternalBody(_ body: String) -> String {
-        if body.hasSuffix(".") {
-            return body + " Consider continuity with prior context."
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return body }
+        if trimmed.hasSuffix(".") {
+            return trimmed + " Weigh continuity with prior context."
         }
-        return body + ". Consider continuity with prior context."
+        return trimmed + ". Weigh continuity with prior context."
     }
 
-    /// Light verbal edge — sharp, not theatrical.
+    // MARK: - Quicksilver — sharp, dry, cutting
+
     private static func quicksilverBody(_ body: String) -> String {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return body }
 
-        // Keep it dry and cutting rather than adding long flourishes.
         if trimmed.hasSuffix(".") {
             return trimmed + " Obvious, once you look."
         }

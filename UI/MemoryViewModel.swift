@@ -25,7 +25,7 @@ final class MemoryViewModel {
 
         let personaID = container.personaManager.activePersonaID
         let policy = container.personaManager.activeMemoryPolicy
-        activePolicyLabel = "threshold \(Int(policy.retentionThreshold * 100))%"
+        activePolicyLabel = PersonaTheme.policySummary(for: personaID)
 
         let query = MemoryQuery(
             personaScope: policy.prefersScopedView ? personaID : nil,

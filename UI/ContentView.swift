@@ -41,14 +41,19 @@ struct ContentView: View {
 
     @ViewBuilder
     private func dashboard(_ vm: HomeViewModel) -> some View {
+        let personaID = vm.activePersonaID
+        let accent = PersonaTheme.accent(for: personaID)
+        let radius = PersonaTheme.cardCornerRadius(for: personaID)
+        let spacing = 20 * PersonaTheme.density(for: personaID)
+
         ScrollView {
-            VStack(spacing: 20) {
-                personaHeader(vm)
+            VStack(spacing: spacing) {
+                personaHeader(vm, accent: accent, radius: radius)
                 personaSwitcher(vm)
-                nexusStatusCard(vm)
-                metricsRow(vm)
+                nexusStatusCard(vm, radius: radius)
+                metricsRow(vm, radius: radius)
                 if let insight = vm.latestInsight {
-                    insightCard(insight, personaID: vm.activePersonaID)
+                    insightCard(insight, personaID: personaID, accent: accent, radius: radius)
                 }
             }
             .padding()
@@ -65,10 +70,19 @@ struct ContentView: View {
         }
     }
 
-    private func personaHeader(_ vm: HomeViewModel) -> some View {
+    private func personaHeader(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(vm.personaDisplayName).font(.largeTitle.weight(.semibold))
-            Text(vm.personaDescription).font(.subheadline).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline) {
+                Text(vm.personaDisplayName)
+                    .font(.largeTitle.weight(.semibold))
+                Spacer()
+                Circle()
+                    .fill(accent)
+                    .frame(width: 12, height: 12)
+            }
+            Text(vm.personaDescription)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             if let reason = vm.lastSwitchReason {
                 Text("Switched: \(reason)")
                     .font(.caption2)
@@ -77,7 +91,11 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(accent.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private func personaSwitcher(_ vm: HomeViewModel) -> some View {
@@ -92,7 +110,7 @@ struct ContentView: View {
         .pickerStyle(.segmented)
     }
 
-    private func nexusStatusCard(_ vm: HomeViewModel) -> some View {
+    private func nexusStatusCard(_ vm: HomeViewModel, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label("Nexus", systemImage: "antenna.radiowaves.left.and.right").font(.headline)
@@ -113,18 +131,18 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 
-    private func metricsRow(_ vm: HomeViewModel) -> some View {
+    private func metricsRow(_ vm: HomeViewModel, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
-            metricTile(title: "Battery", value: vm.batteryLevelText, subtitle: vm.batteryState, systemImage: "battery.100")
-            metricTile(title: "Network", value: vm.networkStatus, subtitle: vm.networkSubtitle, systemImage: "wifi")
-            metricTile(title: "Thermal", value: vm.thermalState, subtitle: nil, systemImage: "thermometer.medium")
+            metricTile(title: "Battery", value: vm.batteryLevelText, subtitle: vm.batteryState, systemImage: "battery.100", radius: radius)
+            metricTile(title: "Network", value: vm.networkStatus, subtitle: vm.networkSubtitle, systemImage: "wifi", radius: radius)
+            metricTile(title: "Thermal", value: vm.thermalState, subtitle: nil, systemImage: "thermometer.medium", radius: radius)
         }
     }
 
-    private func metricTile(title: String, value: String, subtitle: String?, systemImage: String) -> some View {
+    private func metricTile(title: String, value: String, subtitle: String?, systemImage: String, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: systemImage).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.subheadline.weight(.semibold)).lineLimit(1)
@@ -134,16 +152,18 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous))
     }
 
-    private func insightCard(_ insight: Insight, personaID: String) -> some View {
+    private func insightCard(_ insight: Insight, personaID: String, accent: Color, radius: CGFloat) -> some View {
         let display = InsightPresenter.present(insight, personaID: personaID)
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("Latest Insight", systemImage: "sparkles").font(.headline)
                 Spacer()
-                Text(display.styleLabel).font(.caption).foregroundStyle(.secondary)
+                Text(display.styleLabel)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(accent)
             }
             Text(display.title).font(.subheadline.weight(.medium))
             Text(display.body).font(.caption).foregroundStyle(.secondary)
@@ -153,7 +173,11 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+        )
     }
 
     private func healthColor(_ score: Int) -> Color {

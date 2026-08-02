@@ -54,6 +54,8 @@ struct MemoryView: View {
 
     @ViewBuilder
     private func content(_ vm: MemoryViewModel) -> some View {
+        let accent = PersonaTheme.accent(for: container.activeConfiguration.id)
+
         List {
             Section {
                 HStack {
@@ -65,10 +67,12 @@ struct MemoryView: View {
                         }
                     }
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .foregroundStyle(accent)
                 }
             } header: {
                 if !vm.activePolicyLabel.isEmpty {
                     Text("Policy: \(vm.activePolicyLabel)")
+                        .foregroundStyle(accent)
                 }
             }
 

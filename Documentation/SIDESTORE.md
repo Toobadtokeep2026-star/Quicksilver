@@ -2,7 +2,7 @@
 
 **Primary device:** iPhone 14 / **iOS 27**  
 **Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
-**Current ship:** 0.1.0 (build **5**)  
+**Current ship:** 0.1.0 (build **6**)  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
 
 > **Mandatory distribution path:** `Actions → Archive IPA → Run workflow` → download **Quicksilver-unsigned-IPA** → install in SideStore.  
@@ -38,6 +38,7 @@ Post-build checks verify:
 - Persona prompt files are present (or warn if missing)
 - PrivacyInfo.xcprivacy is present (or warn)
 - IPA contains `Payload/Quicksilver.app`
+- Version/build banner is printed in the job log and as a GitHub notice
 
 ### Optional: Signed IPA (better reliability)
 
@@ -61,15 +62,16 @@ When secrets are present you get both artifacts: unsigned + signed.
 4. Trust the new developer profile if prompted (Settings → General → VPN & Device Management).
 5. Launch Quicksilver.
 
-## First-run checklist (iOS 27)
+## First-run checklist (iOS 27) — build 6
 
 1. Settings → paste your xAI API key → enable AI Service.
-2. Home → confirm persona switcher and Nexus health (metrics update live while on screen).
-3. Diagnostics → live signals appear.
-4. Memory → add a note, swipe delete, Clear All, Export.
-5. Ask → send a message with the active persona.
-6. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status.
-7. Background the app 5–10 minutes, then return — state should survive.
+2. Home → confirm persona switcher, accent stroke, and Nexus health.
+3. Switch personas (Forge / Quicksilver / Eternal) — accent, density, and insight tone should change.
+4. Diagnostics → live signals + persona-toned insights.
+5. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
+6. Ask → persona-colored bubbles and send button; send a message with the active persona.
+7. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status.
+8. Background the app 5–10 minutes, then return — state should survive.
 
 ## Refresh / reinstall
 
@@ -81,7 +83,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 - Bundle ID: `com.quicksilver.app`
 - Display name: Quicksilver
-- Version: **0.1.0 (build 5)**
+- Version: **0.1.0 (build 6)**
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.

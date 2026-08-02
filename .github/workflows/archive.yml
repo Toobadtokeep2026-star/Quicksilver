@@ -69,6 +69,18 @@ jobs:
           test -d Quicksilver.xcodeproj
           echo "Project generated successfully."
 
+      - name: Print version banner
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E 'MARKETING_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)"/\1/' || echo "0.1.0")
+          BUILD=$(grep -E 'CURRENT_PROJECT_VERSION:' project.yml | head -1 | sed 's/.*"\(.*\)"/\1/' || echo "?")
+          echo "========================================"
+          echo " Quicksilver $VERSION (build $BUILD)"
+          echo " Config: ${{ inputs.configuration }}"
+          echo " SideStore path: unsigned IPA (primary)"
+          echo "========================================"
+          echo "::notice title=Quicksilver version::${VERSION} (build ${BUILD}) — ${{ inputs.configuration }}"
+
       - name: Check signing secrets
         id: signing
         run: |

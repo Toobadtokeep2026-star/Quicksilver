@@ -3,7 +3,8 @@
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
 **Primary device target:** iPhone 14 / **iOS 27**  
-**Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.
+**Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
+**Current ship:** 0.1.0 (**build 6**)
 
 ```
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
@@ -22,19 +23,22 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure. Job log prints version/build banner.
 
 Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
 ## Status
 
-SideStore hardening pass complete (Privacy Manifest, monitor isolation, Archive verification, DependencyContainer error handling). Primary validation device is iOS 27. See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+**Slice A (persona experience) landed on branch `feature/persona-experience-slice-a`.**  
+PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.  
+SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification).  
+See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
 
 | Screen | Role |
 |--------|------|
-| **Home** | Persona switcher, Nexus health, latest insight |
+| **Home** | Persona switcher + accent, Nexus health, latest insight |
 | **Ask** | Persona-aware chat with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
@@ -65,7 +69,7 @@ Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Settings → paste xAI key → enable AI Service.
-5. Validate Home → Diagnostics → Memory → Ask → persona switch.
+5. Validate Home → Diagnostics → Memory → Ask → persona switch (accent + tone).
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 

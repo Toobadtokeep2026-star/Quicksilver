@@ -1,6 +1,6 @@
 # Quicksilver Hardening Report & Roadmap
 
-Date: 2026-07-28 (cleanup / refine / polish pass + prior production-readiness audit)
+Date: 2026-08-02 (Slice A — persona experience + CI/SideStore polish)
 
 ## Device / OS policy
 
@@ -12,6 +12,15 @@ Date: 2026-07-28 (cleanup / refine / polish pass + prior production-readiness au
 | `AppConfiguration.primaryDeviceOSVersion` | 27.0 | Honest about where we test |
 
 Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archive job and stop SideStore IPA production. Keep the floor at 18 until the runner SDK catches up; binaries built that way install and run correctly on iOS 27.
+
+## Last SideStore drop
+
+| Field | Value |
+|-------|-------|
+| Version | **0.1.0 (build 6)** |
+| Branch | `feature/persona-experience-slice-a` (merge to main after CI green) |
+| Focus | Persona-driven UI tone, accent, density, memory policy visibility |
+| Path | Actions → Archive IPA → Quicksilver-unsigned-IPA |
 
 ## Completed Hardening + Sprint
 
@@ -31,16 +40,20 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - InsightEngine: personaID is an optional traceability tag only; generation is persona-agnostic
 - AppConfiguration documents both build floor (18) and primary device (27)
 
-### P2 — Experience
+### P2 — Experience (Slice A)
+- **PersonaTheme**: accent colors, density, card radius, bubble style per persona
+- **InsightPresenter**: distinct tone + action labels (Forge / Eternal / Quicksilver)
+- Home: persona accent stroke + live density
+- Ask: persona-colored bubbles + send button
+- Memory: explicit policy summary in section header
 - PersonaEntity for typed Shortcuts / Siri selection
 - Memory lifecycle tests + expanded MemoryScorer + NexusIntelligence coverage
-- InsightPresenter: persona-aware tone applied only at presentation time
 
 ### CI / SideStore path
-- Archive IPA workflow verifies `.app` existence, persona prompt presence, and IPA structure
-- Clearer Xcode selection with explicit failure if none found
+- Archive IPA workflow prints version/build banner + GitHub notice
+- Verifies `.app` existence, persona prompt presence, and IPA structure
 - Structure job requires PrivacyInfo.xcprivacy
-- Build number at 4
+- Build number at **6**
 
 ### Architecture invariants preserved
 - Sense → Think → Express
@@ -57,18 +70,19 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### Milestone 2 — Device Intelligence → Done
 ### Milestone 3 — Memory System → Done (UI + decay + export)
 ### Milestone 4 — AI Integration → Largely done (cancellation, prompts, Mock path)
-### Milestone 5 — Polished UI / Personality → In progress (InsightPresenter landed)
+### Milestone 5 — Polished UI / Personality → **Slice A landed** (PersonaTheme + InsightPresenter + surface polish)
 ### Milestone 6 — SideStore production hardening → Largely done
-### Cleanup / refine / polish → Done (this pass)
+### Cleanup / refine / polish → Ongoing
 
 Remaining optional polish:
 - Stronger pure Observation (further reduce any remaining timers)
-- Visual refinement within HIG
 - Optional MetricKit (public APIs only)
 - Full removal of `@unchecked Sendable` once Apple frameworks become Sendable or we wrap them in actors
 - CodeQL / secret-scanning workflow
 - Make SwiftLint blocking once the codebase is fully clean under the current ruleset
 - Raise deployment target to 27.0 the day CI gains an iOS 27 SDK
+- On-device AI provider (Slice B)
+- Richer automation surface (Slice C)
 
 ---
 
@@ -77,14 +91,15 @@ Remaining optional polish:
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact
 3. Install via SideStore (LocalDevVPN connected)
-4. Launch → Home shows persona + Nexus health
-5. Settings → paste xAI key → enable AI Service
-6. Diagnostics → live signals + persona-toned insights
-7. Memory → add note, swipe delete, Clear All, Export
-8. Ask → persona-aware response
-9. Shortcuts: status, remember, ask, report
-10. Background 5–10 min → no excessive drain
-11. Force-quit + relaunch → state intact
-12. Confirm PrivacyInfo.xcprivacy is present inside the installed app (optional advanced check)
+4. Launch → Home shows persona + Nexus health + accent stroke
+5. Switch personas — confirm accent, density, insight tone change
+6. Settings → paste xAI key → enable AI Service
+7. Diagnostics → live signals + persona-toned insights
+8. Memory → policy label visible; add note, swipe delete, Clear All, Export
+9. Ask → persona-colored bubbles + response
+10. Shortcuts: status, remember, ask, report
+11. Background 5–10 min → no excessive drain
+12. Force-quit + relaunch → state intact
+13. Confirm PrivacyInfo.xcprivacy is present inside the installed app (optional advanced check)
 
 No private APIs. Keychain for secrets only.

@@ -19,17 +19,27 @@ struct AskView: View {
 
     @ViewBuilder
     private func content(_ vm: AskViewModel) -> some View {
+        let personaID = container.activeConfiguration.id
+        let accent = PersonaTheme.accent(for: personaID)
+        let bubble = PersonaTheme.assistantBubbleStyle(for: personaID)
+
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        Text("Provider: \(vm.providerName)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack {
+                            Text("Provider: \(vm.providerName)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(container.activeConfiguration.displayName)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(accent)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         ForEach(vm.turns) { turn in
-                            turnBubble(turn)
+                            turnBubble(turn, accent: accent, assistantOpacity: bubble.opacity, assistantWeight: bubble.weight)
                                 .id(turn.id)
                         }
 
@@ -68,6 +78,7 @@ struct AskView: View {
                     } else {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.title2)
+                            .foregroundStyle(accent)
                     }
                 }
                 .disabled(vm.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing)
@@ -77,16 +88,21 @@ struct AskView: View {
         .task { await vm.loadHistory() }
     }
 
-    private func turnBubble(_ turn: ChatTurn) -> some View {
+    private func turnBubble(
+        _ turn: ChatTurn,
+        accent: Color,
+        assistantOpacity: Double,
+        assistantWeight: Font.Weight
+    ) -> some View {
         HStack {
             if turn.role == .user { Spacer(minLength: 40) }
             Text(turn.text)
-                .font(.body)
+                .font(.body.weight(turn.role == .assistant ? assistantWeight : .regular))
                 .padding(12)
                 .background(
                     turn.role == .user
-                        ? Color.accentColor.opacity(0.15)
-                        : Color.secondary.opacity(0.12),
+                        ? accent.opacity(0.18)
+                        : Color.secondary.opacity(assistantOpacity),
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                 )
             if turn.role == .assistant { Spacer(minLength: 40) }

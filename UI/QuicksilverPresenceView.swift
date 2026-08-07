@@ -1,4 +1,5 @@
 import SwiftUI
+import Core
 
 /// Quicksilver is not summoned. He is already here.
 /// A permanent ambient presence in the Sanctum.
@@ -16,7 +17,6 @@ struct QuicksilverPresenceView: View {
 
         VStack(spacing: 16) {
             ZStack {
-                // Outer reflective aura
                 Circle()
                     .fill(
                         RadialGradient(
@@ -33,7 +33,6 @@ struct QuicksilverPresenceView: View {
                     .frame(width: 180, height: 180)
                     .scaleEffect(pulse ? 1.08 : 1.0)
 
-                // Liquid chrome core
                 Circle()
                     .fill(
                         LinearGradient(
@@ -53,7 +52,6 @@ struct QuicksilverPresenceView: View {
                     )
                     .shadow(color: accent.opacity(0.5), radius: 16)
 
-                // Rotating glyph ring (subtle)
                 Circle()
                     .strokeBorder(
                         style: StrokeStyle(lineWidth: 1, dash: [4, 8])

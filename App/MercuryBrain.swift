@@ -58,15 +58,22 @@ final class MercuryBrain {
     var activeConfiguration: PersonaConfiguration { personaManager.activeConfiguration }
 
     /// Primary entry for natural language. All conversation should come through here.
+    /// The Brain owns context assembly so UI cannot accidentally bypass memory,
+    /// persona state, or Nexus signals.
     func ask(_ query: String) async throws -> String {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else {
+            throw AppError.aiRequestFailed("Mercury received an empty request")
+        }
+
         personaManager.recordInteraction()
         personality.noteInteraction()
 
-        let lower = query.lowercased()
+        let lower = trimmedQuery.lowercased()
         let (intent, kind) = classify(query: lower)
 
         personaManager.updateTaskContext(
-            description: query,
+            description: trimmedQuery,
             kind: kind,
             queryIntent: intent
         )
@@ -75,13 +82,14 @@ final class MercuryBrain {
         suggestedChamber = chamberFor(intent: intent, kind: kind, personaID: activePersonaID)
 
         let config = personaManager.activeConfiguration
-        let system = buildSystemPrompt(for: config)
+        let context = makeAIContext(for: trimmedQuery, persona: config)
 
         let response = try await aiService.complete(
-            prompt: query,
-            systemPrompt: system,
-            temperature: config.preferredTemperature,
-            maxTokens: config.maxTokensHint
+            userMessage: trimmedQuery,
+            personaSystemPrompt: buildSystemPrompt(for: config),
+            preferredTemperature: config.preferredTemperature,
+            maxTokensHint: config.maxTokensHint,
+            context: context
         )
 
         let colored = personality.colorResponse(response.content, personaID: config.id)
@@ -141,6 +149,56 @@ final class MercuryBrain {
         }
     }
 
+    // MARK: - Context
+
+    private func makeAIContext(
+        for query: String,
+        persona: PersonaConfiguration
+    ) -> ContextAssembler.Input {
+        let memory = relevantMemorySnippets(for: query, personaID: persona.id)
+        let insights = nexus.state.recentInsights.prefix(3).map(\.title)
+        let device = "health \(nexus.state.overallHealthScore), battery \(batteryDescription)"
+
+        return ContextAssembler.Input(
+            personaID: persona.id,
+            personaDisplayName: persona.displayName,
+            recentMemorySnippets: memory,
+            latestInsightTitles: Array(insights),
+            deviceSummary: device
+        )
+    }
+
+    private func relevantMemorySnippets(for query: String, personaID: String) -> [String] {
+        let words = Set(
+            query
+                .lowercased()
+                .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+                .filter { $0.count >= 3 }
+                .map(String.init)
+        )
+
+        return memoryManager.items(forPersona: personaID)
+            .filter { $0.category != .temporary || $0.importance >= 0.7 }
+            .map { item in
+                let haystack = "\(item.key) \(item.value)".lowercased()
+                let score = words.reduce(into: 0) { total, word in
+                    if haystack.contains(word) { total += 1 }
+                }
+                return (item, score)
+            }
+            .sorted {
+                if $0.1 != $1.1 { return $0.1 > $1.1 }
+                return $0.0.importance > $1.0.importance
+            }
+            .prefix(5)
+            .map { "\($0.0.value)" }
+    }
+
+    private var batteryDescription: String {
+        guard let level = nexus.state.batteryLevel else { return "unknown" }
+        return "\(Int(level * 100))%"
+    }
+
     // MARK: - Internals
 
     private func classify(query: String) -> (QueryIntent, TaskKind) {
@@ -185,7 +243,6 @@ final class MercuryBrain {
             prompt += "\n\nBehavioral posture (internal): \(bias)"
         }
 
-        // Sharpened Phase II intellectual stance
         prompt += """
 
 
@@ -200,8 +257,7 @@ Core stance:
 """
 
         let health = nexus.state.overallHealthScore
-        let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
+        prompt += "\n\nDevice context (private): health \(health), battery \(batteryDescription)."
 
         return prompt
     }

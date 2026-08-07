@@ -94,7 +94,9 @@ public struct CaptureMemoryIntent: AppIntent {
             personaScope: personaID
         )
 
-        IntentDependencies.shared.logger?.info("Memory capture persisted: \(truncated.prefix(60))", category: IntentDependencies.shared.logger?.memory)
+        if let logger = IntentDependencies.shared.logger {
+            logger.info("Memory capture persisted: \(truncated.prefix(60))", category: logger.memory)
+        }
         return .result(value: "Captured: \(truncated)")
     }
 }
@@ -103,7 +105,7 @@ public struct CaptureMemoryIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetContextIntent: AppIntent {
-    public static let title: LocalizedStringResource = "What\'s the Context"
+    public static let title: LocalizedStringResource = "What's the Context"
     public static let description = IntentDescription("Returns a short summary of current Quicksilver state (persona + health signals).")
     public static let openAppWhenRun: Bool = false
 
@@ -226,7 +228,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: GetContextIntent(),
             phrases: [
-                "What\'s the context in \(.applicationName)",
+                "What's the context in \(.applicationName)",
                 "Status for \(.applicationName)"
             ],
             shortTitle: "Context",

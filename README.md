@@ -23,7 +23,7 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure. Job log prints version/build banner.
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structu[...]
 
 Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
@@ -60,6 +60,33 @@ open Quicksilver.xcodeproj
 ```
 
 Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
+
+## Installation
+
+Recommended ways to install opencode tooling for local development and mobile workflows:
+
+- Direct installer (fast, but security risk — runs a remote script):
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
+- npx installer (requires Node.js / npm):
+
+```bash
+npx opencode-mobile install
+```
+
+You can run the included helper scripts in this repository:
+
+```bash
+bash scripts/install-opencode.sh       # direct pipe installer (requested)
+bash scripts/install-opencode-npx.sh   # npx installer (safer if you have Node)
+```
+
+Security note: piping remote scripts into a shell executes code from the network; review before running in sensitive environments.
+
+This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
 
 ## On-device (iPhone 14 / iOS 27) — SideStore path
 

@@ -1,4 +1,12 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {}
+  "name": "Quicksilver Swift Devcontainer",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/swift:1": {}
+  },
+  "extensions": [
+    "vknabel.vscode-swift-development-environment",
+    "eamodio.gitlens"
+  ],
+  "postCreateCommand": "swift --version || true && bash scripts/install-opencode.sh || true"
 }

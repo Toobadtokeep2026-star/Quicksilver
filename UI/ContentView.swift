@@ -18,7 +18,7 @@ struct ContentView: View {
                         .onAppear { viewModel = HomeViewModel(container: container) }
                 }
             }
-            .navigationTitle("Quicksilver")
+            .navigationTitle("Mercury")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -36,7 +36,9 @@ struct ContentView: View {
                     }
                 }
             }
+            .background(PersonaTheme.cosmicBlack.ignoresSafeArea())
         }
+        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -48,10 +50,14 @@ struct ContentView: View {
 
         ScrollView {
             VStack(spacing: spacing) {
+                // Living status — insight-first, not raw metrics
+                livingStatusCard(vm, accent: accent, radius: radius)
+
                 personaHeader(vm, accent: accent, radius: radius)
                 personaSwitcher(vm)
                 nexusStatusCard(vm, radius: radius)
                 metricsRow(vm, radius: radius)
+
                 if let insight = vm.latestInsight {
                     insightCard(insight, personaID: personaID, accent: accent, radius: radius)
                 }
@@ -68,6 +74,30 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             vm.refresh()
         }
+        .animation(PersonaTheme.spring(for: personaID), value: personaID)
+    }
+
+    private func livingStatusCard(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(accent)
+                .frame(width: 8, height: 8)
+                .opacity(0.9)
+
+            Text(vm.livingStatus)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(PersonaTheme.mercurySilver)
+                .lineLimit(2)
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+        )
     }
 
     private func personaHeader(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
@@ -75,10 +105,12 @@ struct ContentView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(vm.personaDisplayName)
                     .font(.largeTitle.weight(.semibold))
+                    .foregroundStyle(PersonaTheme.mercurySilver)
                 Spacer()
                 Circle()
                     .fill(accent)
                     .frame(width: 12, height: 12)
+                    .shadow(color: accent.opacity(0.6), radius: 6)
             }
             Text(vm.personaDescription)
                 .font(.subheadline)
@@ -116,17 +148,19 @@ struct ContentView: View {
                 Label("Nexus", systemImage: "antenna.radiowaves.left.and.right").font(.headline)
                 Spacer()
                 HStack(spacing: 6) {
-                    Circle().fill(vm.isNexusActive ? .green : .secondary).frame(width: 8, height: 8)
+                    Circle().fill(vm.isNexusActive ? PersonaTheme.emeraldAccent : .secondary).frame(width: 8, height: 8)
                     Text(vm.isNexusActive ? "Active" : "Inactive").font(.subheadline).foregroundStyle(.secondary)
                 }
             }
             HStack {
                 Text("Overall health").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(vm.overallHealthScore)").font(.subheadline.weight(.medium)).foregroundStyle(healthColor(vm.overallHealthScore))
+                Text("\(vm.overallHealthScore)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(PersonaTheme.healthColor(vm.overallHealthScore))
             }
             if vm.lowPowerMode {
-                Label("Low Power Mode", systemImage: "battery.25").font(.caption).foregroundStyle(.orange)
+                Label("Low Power Mode", systemImage: "battery.25").font(.caption).foregroundStyle(PersonaTheme.subtleGold)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -178,13 +212,6 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(accent.opacity(0.25), lineWidth: 1)
         )
-    }
-
-    private func healthColor(_ score: Int) -> Color {
-        switch score {
-        case 80...: return .green
-        case 50..<80: return .orange
-        default: return .red
-        }
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
     }
 }

@@ -125,9 +125,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
         PRODUCT_NAME: Quicksilver
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "6"
-        INFOPLIST_KEY_CFBundleDisplayName: Quicksilver
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "7"
+        INFOPLIST_KEY_CFBundleDisplayName: Mercury
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
@@ -136,8 +136,6 @@ targets:
         CODE_SIGN_STYLE: Automatic
         # SideStore-friendly: no private entitlements, public APIs only.
         # Build floor = iOS 18.0 (current CI SDK). Primary validation device = iOS 27.
-        # A lower deployment target is intentional so unsigned IPAs can be produced
-        # on macos-15 / Xcode 16 runners and still install + run on iOS 27.
 
   QuicksilverTests:
     type: bundle.unit-test
@@ -175,35 +173,3 @@ schemes:
       config: Debug
     archive:
       config: Release
-- name: Grok with AWK
-  uses: norwd/grawk@v1.1.0
----
-
-name: Run Awk Script
-on: push
-
-jobs:
-  process-students:
-    name: Process Student Records
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Student Records
-        shell: bash
-        run: |
-          wget https://raw.githubusercontent.com/norwd/grawk/v1/.github/testing/students.csv
-
-      - id: students-named-alex
-        name: Find Students Named Alex
-        uses: norwd/grawk@v1
-        with:
-          input-file: students.csv
-          program: |
-            $1 == "Alex" { # Format is FIRST_NAME, LAST_NAME, AGE, SUBJECT
-              print $2 ", " $1 ": " $3 " year old " $4 " student"
-            }
-
-      - name: Print Found Students
-        shell: bash
-        run: echo "$STUDENTS"
-        env:
-          STUDENTS: ${{ steps.students-named-alex.outputs.results }}

@@ -23,6 +23,9 @@ final class HomeViewModel {
     private(set) var thermalState: String = "unknown"
     private(set) var latestInsight: Insight?
 
+    /// Living status line produced by Mercury Brain (insight-first, not raw metrics).
+    private(set) var livingStatus: String = "Observing."
+
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
 
@@ -49,6 +52,10 @@ final class HomeViewModel {
         networkSubtitle = state.isNetworkExpensive ? "Expensive" : (state.isNetworkConstrained ? "Constrained" : "OK")
         thermalState = state.thermalState.capitalized
         latestInsight = state.recentInsights.first
+
+        // Pull living status from the Brain
+        container.brain.refreshLivingStatus()
+        livingStatus = container.brain.livingStatus
     }
 
     func switchPersona(to id: String) {
@@ -64,7 +71,6 @@ final class HomeViewModel {
     }
 
     /// Keeps Home metrics/insights in sync while the screen is visible.
-    /// Matches DiagnosticsViewModel live-refresh pattern (lightweight snapshot poll).
     func startLiveRefresh(interval: Duration = .seconds(3)) {
         stopLiveRefresh()
         refreshTask = Task { [weak self] in

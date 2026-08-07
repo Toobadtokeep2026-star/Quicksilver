@@ -1,21 +1,27 @@
-# Quicksilver Architecture
+# Mercury: Quicksilver Architecture
 
 ## Vision
 
-Quicksilver is a modular native iOS intelligence framework.
+Mercury is a personal AI operating companion for iPhone.
 
-Sense → Think → Express
+It is not a chatbot. It is not an AI wrapper. It is an intelligent entity with memory, personality, reasoning, and awareness living inside iOS.
+
+Sense → Think → Express → Act
 
 - **Nexus** senses the device and environment
-- **Core + AI** reason over signals and context
-- **Personas + UI** express the result with appropriate voice and behavior
+- **Mercury Brain** reasons, plans, and decides
+- **Personality Engine** shapes expression and behavior
+- **Memory** provides continuity
+- **Personas + UI** express the result with presence
 
 ## Strict Dependency Direction
 
 ```
-                 Quicksilver App
+                 Quicksilver App (Mercury)
                        |
               DependencyContainer
+                       |
+                   MercuryBrain
                        |
  ------------------------------------------------
  |              |              |                |
@@ -33,9 +39,33 @@ Core        Personas        Nexus          Services
 | **Nexus** | Core | Personas, UI, AI providers |
 | **Memory** | Core | UI, AI, Nexus |
 | **Services/AI** | Core | UI, Nexus, Personas |
-| **UI** | Everything via DependencyContainer | Direct business logic |
+| **UI** | Everything via DependencyContainer / Brain | Direct business logic |
 
 Core owns the shared contracts and foundational models. All other modules depend on Core, never the reverse.
+
+## Mercury Brain
+
+Central intelligence coordinator (`App/MercuryBrain.swift`).
+
+Responsibilities:
+- Understand intent
+- Retrieve context (memory + Nexus + persona)
+- Decide when to use tools / AI
+- Plan actions and validate results
+- Maintain and influence `PersonalityState`
+- Produce living status and primary insights
+
+UI and Intents should prefer the Brain for complex flows.
+
+## Personality Engine
+
+`PersonalityState` (Personas module) is a live behavioral system, not static prompt text.
+
+Dimensions:
+- Confidence, Curiosity, Humor, Mischief
+- Focus, Initiative, Skepticism, Patience, Loyalty
+
+These fluctuate with context and strongly bias the active persona.
 
 ## Core Contracts (`Core/Protocols/`)
 
@@ -47,38 +77,31 @@ Core owns the shared contracts and foundational models. All other modules depend
 | `PersonaEngine` | Persona selection & influence | `PersonaManager` |
 | `AutomationProvider` | App Intents / Shortcuts surface | `AutomationBridge` (Nexus) + `QuicksilverIntents` |
 
-Everything communicates through these protocols. Managers and coordinators must not become god objects.
-
 ## Module Responsibilities
 
 **Core**  
-Foundational models (`AIRequest`, `AIResponse`, `MemoryItem`, `AppError`, …), protocols, logging, feature flags, EventBus, configuration. Independent.
+Foundational models, protocols, logging, feature flags, EventBus, configuration.
 
 **Personas**  
-Identity, reasoning style, tone, priorities, memory policy, decision policy. Does not own networking, storage, or UI.
+Identity, reasoning style, tone, `PersonalityState`, memory policy, decision policy.
 
 **Nexus**  
-Diagnostics, sensors, device signals, insight generation. Does not decide personality responses. Publishes time-of-day and pressure events onto EventBus for persona autonomy.
+Diagnostics, sensors, device signals, insight generation. Persona-agnostic.
 
 **Memory**  
-Persistent context and user continuity. Storage backends are replaceable behind `MemoryStore`.
+Persistent context and user continuity. Layered memory is evolving.
 
 **Services/AI**  
-Model communication, prompt/context assembly, response handling. Does not own application state.
+Model communication, prompt/context assembly, response handling.
 
 **UI**  
-Presentation only. Uses Observation + dependency injection. Never creates prompts or owns business logic.
+Presentation only. Uses Observation + Brain / DependencyContainer.
 
-## Nexus Philosophy
+## Visual Identity
 
-Nexus is a privacy-first perception layer:
+Cosmic black · deep violet · mercury silver · emerald · subtle gold · glass · liquid metal.
 
-1. Observes only public Apple APIs
-2. Normalizes into a unified `Signal`
-3. Produces persona-agnostic `Insight`s
-4. Persona voice is applied only at presentation time
-
-No continuous location, no private sysctl, no data leaving the device.
+Persona accents still shift for identity. Motion has meaning (thinking, insight, error).
 
 ## Engineering Rules
 
@@ -87,13 +110,13 @@ No continuous location, no private sysctl, no data leaving the device.
 - Focused commits. Clear documentation of limitations.
 - Prefer working vertical slices over speculative complexity.
 - Every new feature must have a clear architectural home.
+- Depth over quantity. Personality over generic functionality.
 
-## Explicitly Deferred
+## Explicitly Deferred (for now)
 
-- Autonomous agent loops
-- Complex AI memory retrieval / RAG
+- Full autonomous agent loops
+- Complex multi-hop RAG
 - Cloud dependency for core function
 - Plugin marketplace
-- Excessive animation or dashboard chrome
 
-The goal is a stable intelligence framework, not a collection of disconnected features.
+The goal is a stable, present intelligence — not a collection of disconnected features.

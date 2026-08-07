@@ -222,7 +222,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Current Persona",
             systemImageName: "person.crop.circle"
-        )
+        ),
         AppShortcut(
             intent: GetContextIntent(),
             phrases: [
@@ -231,7 +231,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Context",
             systemImageName: "info.circle"
-        )
+        ),
         AppShortcut(
             intent: ReportStatusIntent(),
             phrases: [
@@ -240,7 +240,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Full Status",
             systemImageName: "waveform.path.ecg"
-        )
+        ),
         AppShortcut(
             intent: CaptureMemoryIntent(content: ""),
             phrases: [
@@ -249,7 +249,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Remember",
             systemImageName: "brain.head.profile"
-        )
+        ),
         AppShortcut(
             intent: QueryNexusIntent(query: ""),
             phrases: [

@@ -38,20 +38,8 @@ final class SanctumViewModel {
         thermalState = state.thermalState.capitalized
         overallHealthScore = state.overallHealthScore
 
-        // Chamber determination from Brain / persona domain
-        activeChamber = deriveChamber(personaID: config.id, insight: latestInsight)
-    }
-
-    private func deriveChamber(personaID: String, insight: Insight?) -> SanctumChamber {
-        switch personaID.lowercased() {
-        case "forge":
-            return .forge
-        case "eternal":
-            return .eternal
-        default:
-            // Quicksilver remains in the Sanctum; chambers can still partially awaken
-            return .sanctum
-        }
+        // Invisible Architecture: chamber comes from Brain, not local heuristics.
+        activeChamber = container.brain.suggestedChamber
     }
 
     func startLiveRefresh(interval: Duration = .seconds(3)) {

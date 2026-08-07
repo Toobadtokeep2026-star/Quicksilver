@@ -216,6 +216,7 @@ public struct QueryNexusIntent: AppIntent {
 @available(iOS 17.0, macOS 14.0, *)
 public struct QuicksilverShortcuts: AppShortcutsProvider {
     public static var appShortcuts: [AppShortcut] {
+        [
         AppShortcut(
             intent: GetCurrentPersonaIntent(),
             phrases: [
@@ -261,5 +262,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
+        ]
     }
 }

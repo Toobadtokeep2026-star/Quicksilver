@@ -44,6 +44,7 @@ jobs:
             Core/Models/AIRequest.swift \
             Core/Models/AIResponse.swift \
             Core/Models/MemoryItem.swift \
+            Core/Models/SanctumChamber.swift \
             Package.swift \
             project.yml \
             App/QuicksilverApp.swift \
@@ -104,9 +105,11 @@ jobs:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          # Include repository name so path-renamed workspaces (Quicksilver → QuicksilverV1)
+          # never restore a PCH built against a different absolute ModuleCache path.
+          key: spm-v2-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('Package.swift') }}
           restore-keys: |
-            spm-${{ runner.os }}-
+            spm-v2-${{ runner.os }}-${{ github.repository }}-
 
       - name: Resolve packages
         run: swift package resolve
@@ -114,6 +117,8 @@ jobs:
       - name: Run tests
         run: |
           set -euo pipefail
+          # Drop any restored ModuleCache that still points at a previous workspace path.
+          rm -rf .build/arm64-apple-macosx/debug/ModuleCache 2>/dev/null || true
           swift test --enable-code-coverage 2>&1 | tee spm-test.log
 
       - name: Summarize test results
@@ -129,9 +134,8 @@ jobs:
           name: spm-test-logs
           path: spm-test.log
           retention-days: 7
-          if-no-files-found: ignore
 
-  ios-simulator:
+  ios-simulator-build:
     name: iOS Simulator Build
     runs-on: macos-15
     needs: structure
@@ -162,86 +166,57 @@ jobs:
             exit 1
           fi
           sudo xcode-select -s "$SELECTED"
+          echo "Active developer dir: $(xcode-select -p)"
           xcodebuild -version
-          swift --version
 
       - name: Install XcodeGen + SwiftLint
         run: |
           set -euo pipefail
-          brew install xcodegen swiftlint || brew upgrade xcodegen swiftlint || true
-          xcodegen --version
-          swiftlint version || true
+          brew install xcodegen swiftlint || true
 
       - name: Generate Xcode project
         run: |
           set -euo pipefail
-          echo "Generating Quicksilver.xcodeproj from project.yml…"
           xcodegen generate
-          if [[ ! -d Quicksilver.xcodeproj ]]; then
-            echo "::error::XcodeGen did not produce Quicksilver.xcodeproj"
-            exit 1
-          fi
-          echo "Project generated."
-          xcodebuild -list -project Quicksilver.xcodeproj
 
       - name: SwiftLint (report)
         run: |
-          if command -v swiftlint >/dev/null 2>&1; then
-            echo "=== SwiftLint ==="
-            # Report only; do not fail the job yet so SideStore path stays unblocked
-            # while we tighten rules over time.
-            swiftlint --reporter emoji || true
-          else
-            echo "SwiftLint not available — skipping"
-          fi
+          set -euo pipefail
+          swiftlint lint --reporter github-actions-logging || true
 
       - name: Resolve destination (iPhone simulator)
         id: dest
         run: |
           set -euo pipefail
-          DEST=""
-          for pattern in "iPhone 16" "iPhone 15" "iPhone 14" "iPhone"; do
-            line=$(xcrun simctl list devices available 2>/dev/null | grep -i "$pattern" | head -1 || true)
-            if [[ -n "$line" ]]; then
-              DEST=$(echo "$line" | grep -oE '\([A-F0-9-]{36}\)' | tr -d '()' || true)
-              if [[ -n "$DEST" ]]; then
-                echo "Matched: $line"
-                break
-              fi
-            fi
-          done
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
           if [[ -z "$DEST" ]]; then
-            echo "::error::No iPhone simulator found"
-            xcrun simctl list devices available || true
-            exit 1
+            # Fallback: let xcodebuild pick any iPhone simulator
+            echo "destination=platform=iOS Simulator,name=iPhone 16" >> "$GITHUB_OUTPUT"
+          else
+            echo "destination=platform=iOS Simulator,id=$DEST" >> "$GITHUB_OUTPUT"
           fi
-          echo "Using simulator UDID: $DEST"
-          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Using: $(cat "$GITHUB_OUTPUT")"
 
       - name: Build for iOS Simulator
         run: |
           set -euo pipefail
-          echo "Building scheme Quicksilver for iOS Simulator…"
+          set -o pipefail
           xcodebuild \
             -project Quicksilver.xcodeproj \
             -scheme Quicksilver \
-            -configuration Debug \
-            -destination "platform=iOS Simulator,id=${{ steps.dest.outputs.udid }}" \
+            -destination "${{ steps.dest.outputs.destination }}" \
             -derivedDataPath DerivedData \
+            -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY= \
-            CODE_SIGNING_REQUIRED=NO \
-            build | tee xcodebuild.log
+            build 2>&1 | tee xcodebuild.log
 
       - name: Build diagnostics on failure
         if: failure()
         run: |
-          echo "::group::Last 150 lines of xcodebuild.log"
-          tail -n 150 xcodebuild.log || true
-          echo "::endgroup::"
-          echo "::group::Errors only"
-          grep -iE "error:|fatal|failed" xcodebuild.log | tail -n 40 || true
-          echo "::endgroup::"
+          echo "=== Last 80 lines of xcodebuild.log ==="
+          tail -80 xcodebuild.log || true
+          echo "=== Errors only ==="
+          grep -E "error:|warning:|FAILED|fatal" xcodebuild.log | head -40 || true
 
       - name: Upload build logs
         if: always()

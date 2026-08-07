@@ -3,9 +3,6 @@ import Core
 import Personas
 import Nexus
 
-/// The Sanctum — primary experiential surface of Mercury.
-/// Not a dashboard. A place.
-/// Quicksilver is already here. The Forge and Eternal awaken organically.
 struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: SanctumViewModel?
@@ -23,57 +20,30 @@ struct SanctumView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showAsk) {
-            AskView(container: container)
-        }
-        .sheet(isPresented: $showCodex) {
-            CodexView(container: container)
-        }
-        .sheet(isPresented: $showMemory) {
-            MemoryView(container: container)
-        }
+        .sheet(isPresented: $showAsk) { AskView() }
+        .sheet(isPresented: $showCodex) { CodexView() }
+        .sheet(isPresented: $showMemory) { MemoryView() }
     }
 
     private func sanctumContent(_ vm: SanctumViewModel) -> some View {
         let personaID = vm.activePersonaID
         let accent = PersonaTheme.accent(for: personaID)
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
-
         return ZStack {
-            // Cosmic void
             PersonaTheme.cosmicBlack.ignoresSafeArea()
-
             AmbientLayer(personaID: personaID, chamber: vm.activeChamber)
-
-            // Main Sanctum content
             VStack(spacing: 0) {
                 presenceBar(vm, accent: accent, radius: radius)
-
                 ScrollView {
                     VStack(spacing: 20 * PersonaTheme.density(for: personaID)) {
-                        QuicksilverPresenceView(
-                            personaID: personaID,
-                            chamber: vm.activeChamber,
-                            livingStatus: vm.livingStatus
-                        )
-
-                        // Chamber indicators (awakened state)
+                        QuicksilverPresenceView(personaID: personaID, chamber: vm.activeChamber, livingStatus: vm.livingStatus)
                         chamberIndicators(vm, accent: accent, radius: radius)
-
-                        // Environmental signals (Nexus)
                         environmentalSignals(vm, radius: radius)
-
-                        if let insight = vm.latestInsight {
-                            insightCard(insight, accent: accent, radius: radius)
-                        }
-
+                        if let insight = vm.latestInsight { insightCard(insight, accent: accent, radius: radius) }
                         Spacer(minLength: 80)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, 20).padding(.top, 12)
                 }
-
-                // Ritual bar
                 ritualBar(accent: accent)
             }
         }
@@ -83,72 +53,30 @@ struct SanctumView: View {
         .animation(PersonaTheme.spring(for: personaID), value: vm.livingStatus)
     }
 
-    // MARK: - Presence Bar
-
     private func presenceBar(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack {
-            Circle()
-                .fill(accent)
-                .frame(width: 8, height: 8)
-                .shadow(color: accent.opacity(0.8), radius: 4)
-
-            Text(vm.activeChamber.displayName)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PersonaTheme.mercurySilver)
-
+            Circle().fill(accent).frame(width: 8, height: 8).shadow(color: accent.opacity(0.8), radius: 4)
+            Text(vm.activeChamber.displayName).font(.caption.weight(.semibold)).foregroundStyle(PersonaTheme.mercurySilver)
             Spacer()
-
-            Text(vm.livingStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.4))
+            Text(vm.livingStatus).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+        }.padding(.horizontal, 20).padding(.vertical, 10).background(.ultraThinMaterial.opacity(0.4))
     }
-
-    // MARK: - Chamber Indicators
 
     private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
-            chamberChip(
-                name: "Forge",
-                isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "forge"),
-                radius: radius
-            )
-            chamberChip(
-                name: "Eternal",
-                isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "eternal"),
-                radius: radius
-            )
+            chamberChip(name: "Forge", isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum, accent: PersonaTheme.accent(for: "forge"), radius: radius)
+            chamberChip(name: "Eternal", isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum, accent: PersonaTheme.accent(for: "eternal"), radius: radius)
         }
     }
 
     private func chamberChip(name: String, isAwake: Bool, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(isAwake ? accent : accent.opacity(0.25))
-                .frame(width: 6, height: 6)
-            Text(name)
-                .font(.caption2.weight(isAwake ? .semibold : .regular))
-                .foregroundStyle(isAwake ? PersonaTheme.mercurySilver : .secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.25))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .strokeBorder(accent.opacity(isAwake ? 0.45 : 0.12), lineWidth: 1)
-        )
+            Circle().fill(isAwake ? accent : accent.opacity(0.25)).frame(width: 6, height: 6)
+            Text(name).font(.caption2.weight(isAwake ? .semibold : .regular)).foregroundStyle(isAwake ? PersonaTheme.mercurySilver : .secondary)
+        }.padding(.horizontal, 12).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous).fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.25)))
+            .overlay(RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous).strokeBorder(accent.opacity(isAwake ? 0.45 : 0.12), lineWidth: 1))
     }
-
-    // MARK: - Environmental Signals
 
     private func environmentalSignals(_ vm: SanctumViewModel, radius: CGFloat) -> some View {
         HStack(spacing: 10) {
@@ -161,83 +89,38 @@ struct SanctumView: View {
 
     private func signalPill(title: String, value: String) -> some View {
         VStack(spacing: 2) {
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.35))
-        )
+            Text(title.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+            Text(value).font(.caption.weight(.medium)).foregroundStyle(PersonaTheme.mercurySilver)
+        }.frame(maxWidth: .infinity).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.ultraThinMaterial.opacity(0.35)))
     }
-
-    // MARK: - Insight
 
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Insight")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(accent)
-            Text(insight.summary)
-                .font(.subheadline)
-                .foregroundStyle(PersonaTheme.mercurySilver)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.45))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
-        )
+            Text("Insight").font(.caption2.weight(.semibold)).foregroundStyle(accent)
+            Text(insight.summary).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver)
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(14)
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(.ultraThinMaterial.opacity(0.45)))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.25), lineWidth: 1))
     }
-
-    // MARK: - Ritual Bar
 
     private func ritualBar(accent: Color) -> some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(accent.opacity(0.2))
-                .frame(height: 1)
-
+            Rectangle().fill(accent.opacity(0.2)).frame(height: 1)
             HStack {
-                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Ask") {
-                    showAsk = true
-                }
+                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Ask") { showAsk = true }
                 Spacer()
-                ritualButton(systemImage: "brain.head.profile", label: "Memory") {
-                    showMemory = true
-                }
+                ritualButton(systemImage: "brain.head.profile", label: "Memory") { showMemory = true }
                 Spacer()
-                ritualButton(systemImage: "scroll", label: "Codex") {
-                    showCodex = true
-                }
-            }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 14)
-            .background(.ultraThinMaterial.opacity(0.5))
+                ritualButton(systemImage: "scroll", label: "Codex") { showCodex = true }
+            }.padding(.horizontal, 28).padding(.vertical, 14).background(.ultraThinMaterial.opacity(0.5))
         }
     }
 
     private func ritualButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                Text(label)
-                    .font(.caption2)
-            }
-            .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
-        }
-        .buttonStyle(.plain)
+            VStack(spacing: 4) { Image(systemName: systemImage).font(.title3); Text(label).font(.caption2) }
+                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
+        }.buttonStyle(.plain)
     }
 }
-
-// SanctumChamber lives in Core — shared cleanly with MercuryBrain.

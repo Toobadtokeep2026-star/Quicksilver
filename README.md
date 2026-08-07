@@ -23,16 +23,15 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structu[...]
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.
 
 Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
 
 ## Status
 
-**Slice A (persona experience) landed on branch `feature/persona-experience-slice-a`.**  
-PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.  
-SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification).  
-See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+- **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
+- **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
+- SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
 

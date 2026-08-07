@@ -25,7 +25,7 @@ public struct GetCurrentPersonaIntent: AppIntent {
     }
 }
 
-// MARK: - Force Persona (explicit override only)
+// MARK: - Force Persona (explicit override — uses PersonaEntity)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ForcePersonaIntent: AppIntent {
@@ -33,12 +33,12 @@ public struct ForcePersonaIntent: AppIntent {
     public static let description = IntentDescription("Manually override the autonomous persona selection. Use sparingly.")
     public static let openAppWhenRun: Bool = false
 
-    @Parameter(title: "Persona", description: "forge, quicksilver, or eternal")
-    public var personaID: String
+    @Parameter(title: "Persona")
+    public var persona: PersonaEntity
 
     public init() {}
-    public init(personaID: String) {
-        self.personaID = personaID
+    public init(persona: PersonaEntity) {
+        self.persona = persona
     }
 
     @MainActor
@@ -46,8 +46,28 @@ public struct ForcePersonaIntent: AppIntent {
         guard let manager = IntentDependencies.shared.personaManager else {
             throw AppError.nexusNotReady
         }
-        try await manager.switchTo(id: personaID.lowercased())
+        try await manager.switchTo(id: persona.id.lowercased())
         return .result(value: "Forced to \(manager.activeConfiguration.displayName)")
+    }
+}
+
+// MARK: - Switch to Forge (high-frequency shortcut)
+
+@available(iOS 17.0, macOS 14.0, *)
+public struct SwitchToForgeIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Switch to Forge"
+    public static let description = IntentDescription("Immediately activate the Forge persona for building and engineering work.")
+    public static let openAppWhenRun: Bool = false
+
+    public init() {}
+
+    @MainActor
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        guard let manager = IntentDependencies.shared.personaManager else {
+            throw AppError.nexusNotReady
+        }
+        try await manager.switchTo(id: "forge")
+        return .result(value: "Forge is now active")
     }
 }
 
@@ -145,6 +165,24 @@ public struct ReportStatusIntent: AppIntent {
     }
 }
 
+// MARK: - Open Diagnostics (surfaces DiagnosticsView via App Intent)
+
+@available(iOS 17.0, macOS 14.0, *)
+public struct OpenDiagnosticsIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Open Diagnostics"
+    public static let description = IntentDescription("Open the live diagnostics surface in Quicksilver.")
+    public static let openAppWhenRun: Bool = true
+
+    public init() {}
+
+    @MainActor
+    public func perform() async throws -> some IntentResult {
+        // openAppWhenRun = true is the primary surface.
+        // Future: deep-link via URL or NotificationCenter if needed.
+        return .result()
+    }
+}
+
 // MARK: - Query Nexus (wired to AIService)
 
 @available(iOS 17.0, macOS 14.0, *)
@@ -211,56 +249,90 @@ public struct QueryNexusIntent: AppIntent {
     }
 }
 
-// MARK: - App Shortcuts provider
+// MARK: - App Shortcuts provider (≤ 10 hard limit)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QuicksilverShortcuts: AppShortcutsProvider {
     @AppShortcutsBuilder
     public static var appShortcuts: [AppShortcut] {
+        // 1
         AppShortcut(
             intent: GetCurrentPersonaIntent(),
             phrases: [
                 "What persona is active in \(.applicationName)",
-                "Current persona in \(.applicationName)"
+                "Current persona in \(.applicationName)",
+                "Who is active in \(.applicationName)"
             ],
             shortTitle: "Current Persona",
             systemImageName: "person.crop.circle"
         )
+        // 2
+        AppShortcut(
+            intent: SwitchToForgeIntent(),
+            phrases: [
+                "Switch to Forge in \(.applicationName)",
+                "Activate Forge persona",
+                "Start building with Forge"
+            ],
+            shortTitle: "Switch to Forge",
+            systemImageName: "hammer.fill"
+        )
+        // 3
         AppShortcut(
             intent: GetContextIntent(),
             phrases: [
                 "What's the context in \(.applicationName)",
-                "Status for \(.applicationName)"
+                "Status for \(.applicationName)",
+                "How is \(.applicationName) doing"
             ],
             shortTitle: "Context",
             systemImageName: "info.circle"
         )
+        // 4
         AppShortcut(
             intent: ReportStatusIntent(),
             phrases: [
                 "Report status in \(.applicationName)",
-                "Full diagnostics from \(.applicationName)"
+                "Full diagnostics from \(.applicationName)",
+                "Run diagnostics in \(.applicationName)"
             ],
             shortTitle: "Full Status",
             systemImageName: "waveform.path.ecg"
         )
+        // 5
+        AppShortcut(
+            intent: OpenDiagnosticsIntent(),
+            phrases: [
+                "Open diagnostics in \(.applicationName)",
+                "Show diagnostics in \(.applicationName)"
+            ],
+            shortTitle: "Open Diagnostics",
+            systemImageName: "stethoscope"
+        )
+        // 6
         AppShortcut(
             intent: CaptureMemoryIntent(content: ""),
             phrases: [
                 "Remember this in \(.applicationName)",
-                "Capture memory in \(.applicationName)"
+                "Capture memory in \(.applicationName)",
+                "Note this in \(.applicationName)"
             ],
             shortTitle: "Remember",
             systemImageName: "brain.head.profile"
         )
+        // 7
         AppShortcut(
             intent: QueryNexusIntent(query: ""),
             phrases: [
                 "Ask Nexus in \(.applicationName)",
-                "Ask \(.applicationName)"
+                "Ask \(.applicationName)",
+                "Talk to \(.applicationName)"
             ],
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
+        // ForcePersonaIntent remains available in the Shortcuts app and via Siri
+        // but is intentionally not promoted to an App Shortcut so we stay under the 10 limit
+        // and keep the highest-frequency actions in the automatic surface.
     }
 }

@@ -215,8 +215,8 @@ public struct QueryNexusIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QuicksilverShortcuts: AppShortcutsProvider {
+    @AppShortcutsBuilder
     public static var appShortcuts: [AppShortcut] {
-        [
         AppShortcut(
             intent: GetCurrentPersonaIntent(),
             phrases: [
@@ -225,7 +225,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Current Persona",
             systemImageName: "person.crop.circle"
-        ),
+        )
         AppShortcut(
             intent: GetContextIntent(),
             phrases: [
@@ -234,7 +234,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Context",
             systemImageName: "info.circle"
-        ),
+        )
         AppShortcut(
             intent: ReportStatusIntent(),
             phrases: [
@@ -243,7 +243,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Full Status",
             systemImageName: "waveform.path.ecg"
-        ),
+        )
         AppShortcut(
             intent: CaptureMemoryIntent(content: ""),
             phrases: [
@@ -252,7 +252,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Remember",
             systemImageName: "brain.head.profile"
-        ),
+        )
         AppShortcut(
             intent: QueryNexusIntent(query: ""),
             phrases: [
@@ -262,6 +262,5 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
-        ]
     }
 }

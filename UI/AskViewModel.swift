@@ -70,45 +70,14 @@ final class AskViewModel {
 
         await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
 
-        await container.memoryManager.load()
-        let memoryQuery = MemoryQuery(
-            personaScope: policy.prefersScopedView ? personaID : nil,
-            minimumImportance: policy.retentionThreshold,
-            limit: 5
-        )
-        let memories = container.memoryManager.items(matching: memoryQuery, retentionThreshold: policy.retentionThreshold)
-            .filter { $0.category != .conversation }
-            .map { $0.value }
-
-        let state = container.nexus.state
-        let insightTitles = state.recentInsights.prefix(3).map { $0.title }
-        var deviceParts: [String] = []
-        if let level = state.batteryLevel {
-            deviceParts.append("Battery \(Int(level * 100))%")
-        }
-        deviceParts.append("Network \(state.networkStatus)")
-        deviceParts.append("Thermal \(state.thermalState)")
-
-        let context = ContextAssembler.Input(
-            personaID: config.id,
-            personaDisplayName: config.displayName,
-            recentMemorySnippets: memories,
-            latestInsightTitles: Array(insightTitles),
-            deviceSummary: deviceParts.joined(separator: ", ")
-        )
-
         do {
-            let response = try await container.aiService.complete(
-                userMessage: text,
-                personaSystemPrompt: config.systemPrompt,
-                preferredTemperature: config.preferredTemperature,
-                maxTokensHint: config.maxTokensHint,
-                context: context
-            )
+            // All conversation now routes through Mercury Brain
+            let responseText = try await container.brain.ask(text)
+
             let assistantTurn = ChatTurn(
                 id: UUID(),
                 role: .assistant,
-                text: response.content,
+                text: responseText,
                 createdAt: Date()
             )
             turns.append(assistantTurn)

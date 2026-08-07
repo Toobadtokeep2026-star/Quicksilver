@@ -6,7 +6,7 @@ struct QuicksilverApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SanctumView()
                 .environment(container)
                 .preferredColorScheme(.dark)
         }

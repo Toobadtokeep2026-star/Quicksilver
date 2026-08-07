@@ -8,6 +8,9 @@ import Nexus
 
 /// Mercury Brain — central intelligence coordinator.
 ///
+/// Invisible Architecture: UI and Intents never select engines, providers,
+/// or memory strategies. The Brain decides.
+///
 /// Responsibilities:
 /// - Understand intent
 /// - Retrieve context (memory + Nexus signals + persona state)
@@ -15,14 +18,10 @@ import Nexus
 /// - Plan and validate responses
 /// - Influence personality behavioral state
 /// - Surface insights rather than raw data
-///
-/// UI never talks to AIService or MemoryManager directly for complex flows.
-/// All reasoning routes through the Brain.
+/// - Determine which chamber (Forge / Eternal / Sanctum) should awaken
 @MainActor
 @Observable
 final class MercuryBrain {
-
-    // MARK: - Dependencies (owned by DependencyContainer)
 
     private let personaManager: PersonaManager
     private let memoryManager: MemoryManager
@@ -31,21 +30,10 @@ final class MercuryBrain {
     private let eventBus: EventBus
     private let logger: LoggerService
 
-    // MARK: - Personality Behavioral State
-
-    /// Live behavioral dimensions that influence tone, initiative, and style.
-    /// These are not prompts — they are runtime state that shapes expression.
     private(set) var personality = PersonalityState()
-
-    // MARK: - Derived Intelligence
-
-    /// Highest-value current insight, already persona-styled where possible.
     private(set) var primaryInsight: String?
-
-    /// Short natural-language status Mercury would speak.
-    private(set) var livingStatus: String = "Observing."
-
-    // MARK: - Init
+    private(set) var livingStatus: String = "Quicksilver is present. Observing."
+    private(set) var suggestedChamber: SanctumChamber = .sanctum
 
     init(
         personaManager: PersonaManager,
@@ -62,27 +50,18 @@ final class MercuryBrain {
         self.eventBus = eventBus
         self.logger = logger
 
-        // Seed personality from active persona
         personality.applyPersonaBias(personaID: personaManager.activePersonaID)
         refreshLivingStatus()
     }
 
-    // MARK: - Public Surface
+    var activePersonaID: String { personaManager.activePersonaID }
+    var activeConfiguration: PersonaConfiguration { personaManager.activeConfiguration }
 
-    var activePersonaID: String {
-        personaManager.activePersonaID
-    }
-
-    var activeConfiguration: PersonaConfiguration {
-        personaManager.activeConfiguration
-    }
-
-    /// Primary entry for natural language queries (UI + Intents).
+    /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
         personality.noteInteraction()
 
-        // Classify intent lightly for task context
         let lower = query.lowercased()
         let (intent, kind) = classify(query: lower)
 
@@ -92,8 +71,8 @@ final class MercuryBrain {
             queryIntent: intent
         )
 
-        // Bias personality toward the moment
         personality.adjustFor(intent: intent, kind: kind)
+        suggestedChamber = chamberFor(intent: intent, kind: kind, personaID: activePersonaID)
 
         let config = personaManager.activeConfiguration
         let system = buildSystemPrompt(for: config)
@@ -105,23 +84,20 @@ final class MercuryBrain {
             maxTokens: config.maxTokensHint
         )
 
-        // Light post-processing for personality color
         let colored = personality.colorResponse(response.content, personaID: config.id)
-
         refreshLivingStatus()
         return colored
     }
 
-    /// Force a persona switch and update behavioral bias.
     func switchPersona(to id: String) async throws {
         try await personaManager.switchTo(id: id)
         personality.applyPersonaBias(personaID: id)
         nexus.updatePersonaContext(id)
+        suggestedChamber = chamberForPersona(id)
         refreshLivingStatus()
         logger.info("Mercury Brain: persona → \(id)", category: logger.persona)
     }
 
-    /// Capture a memory through the Brain (adds context automatically).
     func remember(_ content: String) async {
         let truncated = String(content.prefix(500))
         let personaID = personaManager.activePersonaID
@@ -147,7 +123,6 @@ final class MercuryBrain {
         refreshLivingStatus()
     }
 
-    /// Refresh derived living status from Nexus + personality.
     func refreshLivingStatus() {
         let state = nexus.state
         let persona = personaManager.activeConfiguration.displayName
@@ -156,47 +131,77 @@ final class MercuryBrain {
             primaryInsight = insight.title
             livingStatus = "\(persona): \(insight.title)"
         } else if state.overallHealthScore < 50 {
-            livingStatus = "\(persona) is watching system pressure. Health \(state.overallHealthScore)."
-            personality.increase(.skepticism, by: 0.05)
+            livingStatus = "\(persona) watches rising pressure. Health \(state.overallHealthScore)."
+            personality.increase(.skepticism, by: 0.04)
         } else if state.lowPowerMode {
-            livingStatus = "\(persona) notes low power. Conserving focus."
-            personality.increase(.patience, by: 0.04)
+            livingStatus = "\(persona) notes low power. Conserving."
+            personality.increase(.patience, by: 0.03)
         } else {
-            livingStatus = "\(persona) is present. Observing quietly."
+            livingStatus = "\(persona) is present. The Sanctum holds."
         }
     }
 
     // MARK: - Internals
 
     private func classify(query: String) -> (QueryIntent, TaskKind) {
-        if containsAny(query, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision", "swift", "xcode"]) {
+        if containsAny(query, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision", "swift", "xcode", "spm", "git", "commit", "pr ", "pull request"]) {
             return (.preciseTechnical, .building)
         }
-        if containsAny(query, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity", "archive"]) {
+        if containsAny(query, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity", "archive", "memory"]) {
             return (.reflective, .reflecting)
         }
         if containsAny(query, ["idea", "brainstorm", "what if", "explore", "creative", "option", "strategy", "imagine"]) {
             return (.creative, .exploring)
         }
-        if containsAny(query, ["diagnose", "why is", "broken", "failing", "battery", "network", "health"]) {
+        if containsAny(query, ["diagnose", "why is", "broken", "failing", "battery", "network", "health", "thermal"]) {
             return (.diagnostic, .debugging)
         }
         return (.strategic, .exploring)
     }
 
+    private func chamberFor(intent: QueryIntent, kind: TaskKind, personaID: String) -> SanctumChamber {
+        if personaID == "forge" || intent == .preciseTechnical || kind == .building || kind == .debugging {
+            return .forge
+        }
+        if personaID == "eternal" || intent == .reflective || intent == .diagnostic || kind == .reflecting {
+            return .eternal
+        }
+        return .sanctum
+    }
+
+    private func chamberForPersona(_ id: String) -> SanctumChamber {
+        switch id.lowercased() {
+        case "forge": return .forge
+        case "eternal": return .eternal
+        default: return .sanctum
+        }
+    }
+
     private func buildSystemPrompt(for config: PersonaConfiguration) -> String {
         var prompt = config.systemPrompt
 
-        // Inject live behavioral guidance
         let bias = personality.promptBias()
         if !bias.isEmpty {
-            prompt += "\n\nCurrent behavioral posture: \(bias)"
+            prompt += "\n\nBehavioral posture (internal): \(bias)"
         }
 
-        // Inject light Nexus context for awareness
+        // Sharpened Phase II intellectual stance
+        prompt += """
+
+
+Core stance:
+- Truth is more important than agreement.
+- Challenge unsupported conclusions with precision.
+- Critique ideas, never the person.
+- Admit uncertainty when evidence is incomplete.
+- Prefer the smallest verifiable next step over speculation.
+- Dry, elegant wit is allowed; cruelty is not.
+- Everything ultimately serves the user's long-term success.
+"""
+
         let health = nexus.state.overallHealthScore
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        prompt += "\n\nDevice context (private, for awareness only): health \(health), battery \(battery)."
+        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
 
         return prompt
     }

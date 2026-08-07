@@ -24,13 +24,13 @@ struct SanctumView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showAsk) {
-            AskView(container: container)
+            AskView()
         }
         .sheet(isPresented: $showCodex) {
-            CodexView(container: container)
+            CodexView()
         }
         .sheet(isPresented: $showMemory) {
-            MemoryView(container: container)
+            MemoryView()
         }
     }
 
@@ -183,7 +183,7 @@ struct SanctumView: View {
             Text("Insight")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(accent)
-            Text(insight.summary)
+            Text(insight.body)
                 .font(.subheadline)
                 .foregroundStyle(PersonaTheme.mercurySilver)
         }

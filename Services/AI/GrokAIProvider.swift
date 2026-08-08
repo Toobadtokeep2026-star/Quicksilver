@@ -52,11 +52,10 @@ struct GrokAIProvider: AIProvider {
             model: model,
             messages: messages,
             temperature: request.temperature,
-            max_tokens: request.maxTokens,
+            maxTokens: request.maxTokens,
             stream: false
         )
 
-        // Construct coders per-request: JSONEncoder/Decoder are not Sendable.
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
         urlRequest.httpBody = try encoder.encode(body)
@@ -68,7 +67,6 @@ struct GrokAIProvider: AIProvider {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            // Never surface the raw error if it might contain request details
             throw AppError.networkUnavailable
         }
 
@@ -79,8 +77,9 @@ struct GrokAIProvider: AIProvider {
         }
 
         guard (200...299).contains(http.statusCode) else {
-            // Truncate and never echo potential secrets
-            let snippet = String(data: data, encoding: .utf8).map { String($0.prefix(120)) } ?? "HTTP \(http.statusCode)"
+            let snippet = String(data: data, encoding: .utf8)
+                .map { String($0.prefix(120)) }
+                ?? "HTTP \(http.statusCode)"
             throw AppError.aiRequestFailed("Grok API \(http.statusCode): \(snippet)")
         }
 
@@ -96,13 +95,16 @@ struct GrokAIProvider: AIProvider {
         }
 
         let finishReason: AIResponse.FinishReason
-        switch first.finish_reason {
+        switch first.finishReason {
         case "length": finishReason = .length
         default: finishReason = .stop
         }
 
         let usage: AIResponse.Usage? = decoded.usage.map {
-            .init(promptTokens: $0.prompt_tokens ?? 0, completionTokens: $0.completion_tokens ?? 0)
+            .init(
+                promptTokens: $0.promptTokens ?? 0,
+                completionTokens: $0.completionTokens ?? 0
+            )
         }
 
         return AIResponse(

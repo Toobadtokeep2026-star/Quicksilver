@@ -30,7 +30,6 @@ public actor SwiftDataMemoryStore: MemoryStore {
     }
 
     public func save(_ item: MemoryItem) async throws {
-        // Hoist id: #Predicate cannot lower member access on a captured struct.
         let itemID = item.id
         let descriptor = FetchDescriptor<MemoryEntry>(
             predicate: #Predicate { $0.id == itemID }
@@ -47,6 +46,14 @@ public actor SwiftDataMemoryStore: MemoryStore {
         let descriptor = FetchDescriptor<MemoryEntry>(
             predicate: #Predicate { $0.id == id }
         )
+        for entry in try context.fetch(descriptor) {
+            context.delete(entry)
+        }
+        try context.save()
+    }
+
+    public func deleteAll() async throws {
+        let descriptor = FetchDescriptor<MemoryEntry>()
         for entry in try context.fetch(descriptor) {
             context.delete(entry)
         }

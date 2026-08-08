@@ -5,51 +5,48 @@ import Memory
 
 struct MemoryView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: MemoryViewModel?
+    @State private var viewModel: MemoryViewModel
     @State private var draft = ""
     @State private var showClearConfirm = false
     @State private var sharePayload: SharePayload?
 
-    var body: some View {
-        Group {
-            if let vm = viewModel {
-                content(vm)
-            } else {
-                ProgressView()
-                    .onAppear { viewModel = MemoryViewModel(container: container) }
-            }
-        }
-        .navigationTitle("Memory")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    viewModel?.prepareExport()
-                    if let json = viewModel?.lastExportJSON {
-                        sharePayload = SharePayload(text: json)
-                    }
-                } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }
-                .disabled(viewModel?.items.isEmpty ?? true)
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: MemoryViewModel(container: container))
+    }
 
-                Button(role: .destructive) {
-                    showClearConfirm = true
-                } label: {
-                    Label("Clear", systemImage: "trash")
+    var body: some View {
+        content(viewModel)
+            .navigationTitle("Memory")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.prepareExport()
+                        if let json = viewModel.lastExportJSON {
+                            sharePayload = SharePayload(text: json)
+                        }
+                    } label: {
+                        Label("Export", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(viewModel.items.isEmpty)
+
+                    Button(role: .destructive) {
+                        showClearConfirm = true
+                    } label: {
+                        Label("Clear", systemImage: "trash")
+                    }
+                    .disabled(viewModel.items.isEmpty)
                 }
-                .disabled(viewModel?.items.isEmpty ?? true)
             }
-        }
-        .confirmationDialog("Clear all memories? This cannot be undone.", isPresented: $showClearConfirm, titleVisibility: .visible) {
-            Button("Clear All", role: .destructive) {
-                Task { await viewModel?.clearAll() }
+            .confirmationDialog("Clear all memories? This cannot be undone.", isPresented: $showClearConfirm, titleVisibility: .visible) {
+                Button("Clear All", role: .destructive) {
+                    Task { await viewModel.clearAll() }
+                }
+                Button("Cancel", role: .cancel) {}
             }
-            Button("Cancel", role: .cancel) {}
-        }
-        .sheet(item: $sharePayload) { payload in
-            ActivityView(activityItems: [payload.text])
-        }
+            .sheet(item: $sharePayload) { payload in
+                ActivityView(activityItems: [payload.text])
+            }
     }
 
     @ViewBuilder
@@ -71,8 +68,7 @@ struct MemoryView: View {
                 }
             } header: {
                 if !vm.activePolicyLabel.isEmpty {
-                    Text("Policy: \(vm.activePolicyLabel)")
-                        .foregroundStyle(accent)
+                    Text("Policy: \(vm.activePolicyLabel)").foregroundStyle(accent)
                 }
             }
 
@@ -80,27 +76,20 @@ struct MemoryView: View {
                 if vm.isLoading {
                     ProgressView()
                 } else if vm.items.isEmpty {
-                    Text("No memories match current policy")
-                        .foregroundStyle(.secondary)
+                    Text("No memories match current policy").foregroundStyle(.secondary)
                 } else {
                     ForEach(vm.items) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text(item.key)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                Text(item.key).font(.caption).foregroundStyle(.secondary)
                                 Spacer()
                                 importanceBadge(item.importance)
                             }
                             Text(item.value).font(.body)
                             HStack {
-                                Text(item.updatedAt, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                Text(item.updatedAt, style: .relative).font(.caption2).foregroundStyle(.tertiary)
                                 if let scope = item.personaScope {
-                                    Text("· \(scope)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
+                                    Text("· \(scope)").font(.caption2).foregroundStyle(.tertiary)
                                 }
                             }
                         }

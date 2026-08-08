@@ -42,7 +42,7 @@ struct SanctumView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showAsk) { AskView(container: container) }
         .sheet(isPresented: $showMemory) { MemoryView(container: container) }
-        .sheet(isPresented: $showCodex) { CodexView(container: container) }
+        .sheet(isPresented: $showCodex) { CodexView().environment(container) }
         .sheet(item: $activeRealm) { realm in
             switch realm {
             case .forge: ForgeView().environment(container)

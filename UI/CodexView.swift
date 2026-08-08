@@ -1,21 +1,78 @@
 import SwiftUI
 
-/// The Codex — governance of Mercury himself.
-/// Not a settings screen. The user is altering the fundamental laws.
+/// The Codex: governance of Mercury himself, not a generic settings screen.
 struct CodexView: View {
-    @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: SettingsViewModel?
     @Environment(\.dismiss) private var dismiss
+    @State private var viewModel: SettingsViewModel
+    private let container: DependencyContainer
+
+    init(container: DependencyContainer) {
+        self.container = container
+        _viewModel = State(initialValue: SettingsViewModel(container: container))
+    }
 
     var body: some View {
-        Group {
-            if let vm = viewModel {
-                codexContent(vm)
-            } else {
-                ProgressView()
-                    .onAppear { viewModel = SettingsViewModel(container: container) }
+        Form {
+            Section {
+                Toggle("Intelligence Active", isOn: Binding(
+                    get: { viewModel.aiEnabled },
+                    set: { viewModel.setAIEnabled($0) }
+                ))
+                LabeledContent("Vessel", value: viewModel.providerName)
+                LabeledContent("Key bound", value: viewModel.hasStoredKey ? "Yes — Keychain" : "Unbound")
+            } header: {
+                Text("Mind")
+            } footer: {
+                Text("Credentials remain sealed in the device Keychain.")
+            }
+
+            Section {
+                Toggle("Autonomous Persona Shifts", isOn: Binding(
+                    get: { viewModel.personaAutonomyEnabled },
+                    set: { viewModel.setPersonaAutonomy($0) }
+                ))
+                if let reason = viewModel.lastSwitchReason {
+                    LabeledContent("Last shift", value: reason)
+                }
+            } header: {
+                Text("Identity")
+            }
+
+            Section {
+                SecureField("Bind xAI key", text: Binding(
+                    get: { viewModel.apiKeyDraft },
+                    set: { viewModel.apiKeyDraft = $0 }
+                ))
+                .textContentType(.password)
+                .autocorrectionDisabled()
+
+                Button("Bind Key") { viewModel.saveAPIKey() }
+                    .disabled(viewModel.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                if viewModel.hasStoredKey {
+                    Button("Unbind Key", role: .destructive) { viewModel.clearAPIKey() }
+                }
+            } header: {
+                Text("Covenant")
+            }
+
+            if let message = viewModel.statusMessage {
+                Section {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(viewModel.statusIsError ? .red : .secondary)
+                }
+            }
+
+            Section {
+                LabeledContent("Version", value: container.configuration.fullVersionString)
+                LabeledContent("Realm", value: "Sanctum")
+            } header: {
+                Text("Record")
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(PersonaTheme.cosmicBlack)
         .navigationTitle("The Codex")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -24,77 +81,6 @@ struct CodexView: View {
             }
         }
         .preferredColorScheme(.dark)
-    }
-
-    @ViewBuilder
-    private func codexContent(_ vm: SettingsViewModel) -> some View {
-        Form {
-            Section {
-                Toggle("Intelligence Active", isOn: Binding(
-                    get: { vm.aiEnabled },
-                    set: { vm.setAIEnabled($0) }
-                ))
-                LabeledContent("Vessel", value: vm.providerName)
-                LabeledContent("Key bound", value: vm.hasStoredKey ? "Yes — Keychain" : "Unbound")
-            } header: {
-                Text("Mind")
-            } footer: {
-                Text("Credentials remain sealed in the device Keychain. They never leave the device in logs or defaults.")
-            }
-
-            Section {
-                Toggle("Autonomous Persona Shifts", isOn: Binding(
-                    get: { vm.personaAutonomyEnabled },
-                    set: { vm.setPersonaAutonomy($0) }
-                ))
-                if let reason = vm.lastSwitchReason {
-                    LabeledContent("Last shift", value: reason)
-                }
-            } header: {
-                Text("Identity")
-            } footer: {
-                Text("When enabled, Mercury may shift between Quicksilver, Forge, and Eternal according to task, pressure, and time. Manual shifts always take precedence.")
-            }
-
-            Section {
-                SecureField("Bind xAI key", text: Binding(
-                    get: { vm.apiKeyDraft },
-                    set: { vm.apiKeyDraft = $0 }
-                ))
-                .textContentType(.password)
-                .autocorrectionDisabled()
-
-                Button("Bind Key") {
-                    vm.saveAPIKey()
-                }
-                .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                if vm.hasStoredKey {
-                    Button("Unbind Key", role: .destructive) {
-                        vm.clearAPIKey()
-                    }
-                }
-            } header: {
-                Text("Covenant")
-            }
-
-            if let message = vm.statusMessage {
-                Section {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(vm.statusIsError ? .red : .secondary)
-                }
-            }
-
-            Section {
-                LabeledContent("Version", value: container.configuration.fullVersionString)
-                LabeledContent("Sanctum", value: "Phase II")
-            } header: {
-                Text("Record")
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(PersonaTheme.cosmicBlack)
-        .onAppear { vm.refresh() }
+        .task { viewModel.refresh() }
     }
 }

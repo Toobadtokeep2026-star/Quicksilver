@@ -35,6 +35,10 @@ public actor UserDefaultsMemoryStore: MemoryStore {
         defaults.set(data, forKey: storageKey)
     }
 
+    public func deleteAll() async throws {
+        defaults.removeObject(forKey: storageKey)
+    }
+
     public func deleteAll(in category: MemoryItem.Category) async throws {
         var items = try await loadAll()
         items.removeAll { $0.category == category }

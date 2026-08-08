@@ -3,25 +3,22 @@ import Nexus
 
 struct DiagnosticsView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: DiagnosticsViewModel?
+    @State private var viewModel: DiagnosticsViewModel
+
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: DiagnosticsViewModel(container: container))
+    }
 
     var body: some View {
-        Group {
-            if let vm = viewModel {
-                content(vm)
-            } else {
-                ProgressView()
-                    .onAppear { viewModel = DiagnosticsViewModel(container: container) }
+        content(viewModel)
+            .navigationTitle("Diagnostics")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Refresh") { viewModel.refresh() }
+                }
             }
-        }
-        .navigationTitle("Diagnostics")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Refresh") { viewModel?.refresh() }
-            }
-        }
-        .onDisappear { viewModel?.stopLiveRefresh() }
+            .onDisappear { viewModel.stopLiveRefresh() }
     }
 
     @ViewBuilder
@@ -35,9 +32,7 @@ struct DiagnosticsView: View {
                 LabeledContent("Network", value: vm.networkStatus)
                 LabeledContent("Battery", value: vm.batteryText)
                 LabeledContent("Thermal", value: vm.thermal)
-                if vm.lowPower {
-                    LabeledContent("Power", value: "Low Power Mode")
-                }
+                if vm.lowPower { LabeledContent("Power", value: "Low Power Mode") }
                 LabeledContent("Last refresh", value: vm.lastRefresh.formatted(date: .omitted, time: .standard))
             }
 
@@ -51,9 +46,7 @@ struct DiagnosticsView: View {
                             Text(display.title).font(.subheadline.weight(.medium))
                             Text(display.body).font(.caption).foregroundStyle(.secondary)
                             Text(display.styleLabel).font(.caption2).foregroundStyle(.tertiary)
-                            if let action = display.action {
-                                Text(action).font(.caption2).foregroundStyle(.tertiary)
-                            }
+                            if let action = display.action { Text(action).font(.caption2).foregroundStyle(.tertiary) }
                         }
                         .padding(.vertical, 2)
                     }

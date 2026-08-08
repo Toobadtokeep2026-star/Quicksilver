@@ -14,7 +14,7 @@ final class GrokAPIModelsTests: XCTestCase {
         let decoded = try JSONDecoder().decode(GrokAPI.ChatResponse.self, from: json)
         XCTAssertEqual(decoded.choices.count, 1)
         XCTAssertEqual(decoded.choices[0].message.content, "Forge ready.")
-        XCTAssertEqual(decoded.usage?.prompt_tokens, 12)
+        XCTAssertEqual(decoded.usage?.promptTokens, 12)
     }
 
     func testGrokMakeFactory() {

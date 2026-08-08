@@ -3,241 +3,199 @@ import Core
 import Personas
 import Nexus
 
-/// The Sanctum — primary experiential surface of Mercury.
-/// Not a dashboard. A place.
-/// Quicksilver is already here. The Forge and Eternal awaken organically.
 struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: SanctumViewModel?
+    @State private var viewModel: SanctumViewModel
+    @State private var activeRealm: Realm?
     @State private var showAsk = false
-    @State private var showCodex = false
     @State private var showMemory = false
+    @State private var showCodex = false
+
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: SanctumViewModel(container: container))
+    }
 
     var body: some View {
-        Group {
-            if let viewModel {
-                sanctumContent(viewModel)
-            } else {
-                Color.black.ignoresSafeArea()
-                    .onAppear { viewModel = SanctumViewModel(container: container) }
+        let vm = viewModel
+        let accent = PersonaTheme.accent(for: vm.activePersonaID)
+
+        ZStack {
+            PersonaTheme.cosmicBlack.ignoresSafeArea()
+            SanctumAtmosphere(accent: accent)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    sanctumHeader(vm, accent: accent)
+                    QuicksilverOrb(status: vm.livingStatus, accent: accent)
+                    presenceLine(vm, accent: accent)
+                    realmGate(vm, accent: accent)
+                    environmentalSigils(vm, accent: accent)
+                    if let insight = vm.latestInsight { insightCard(insight, accent: accent) }
+                    Spacer(minLength: 100)
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
             }
+
+            VStack { Spacer(); invocationBar(accent: accent) }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showAsk) {
-            AskView()
-        }
-        .sheet(isPresented: $showCodex) {
-            CodexView()
-        }
-        .sheet(isPresented: $showMemory) {
-            MemoryView()
-        }
-    }
-
-    private func sanctumContent(_ vm: SanctumViewModel) -> some View {
-        let personaID = vm.activePersonaID
-        let accent = PersonaTheme.accent(for: personaID)
-        let radius = PersonaTheme.cardCornerRadius(for: personaID)
-
-        return ZStack {
-            // Cosmic void
-            PersonaTheme.cosmicBlack.ignoresSafeArea()
-
-            AmbientLayer(personaID: personaID, chamber: vm.activeChamber)
-
-            // Main Sanctum content
-            VStack(spacing: 0) {
-                presenceBar(vm, accent: accent, radius: radius)
-
-                ScrollView {
-                    VStack(spacing: 20 * PersonaTheme.density(for: personaID)) {
-                        QuicksilverPresenceView(
-                            personaID: personaID,
-                            chamber: vm.activeChamber,
-                            livingStatus: vm.livingStatus
-                        )
-
-                        // Chamber indicators (awakened state)
-                        chamberIndicators(vm, accent: accent, radius: radius)
-
-                        // Environmental signals (Nexus)
-                        environmentalSignals(vm, radius: radius)
-
-                        if let insight = vm.latestInsight {
-                            insightCard(insight, accent: accent, radius: radius)
-                        }
-
-                        Spacer(minLength: 80)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                }
-
-                // Ritual bar
-                ritualBar(accent: accent)
+        .sheet(isPresented: $showAsk) { AskView(container: container) }
+        .sheet(isPresented: $showMemory) { MemoryView(container: container) }
+        .sheet(isPresented: $showCodex) { CodexView(container: container) }
+        .sheet(item: $activeRealm) { realm in
+            switch realm {
+            case .forge: ForgeView().environment(container)
+            case .observatory: EternalObservatoryView().environment(container)
             }
         }
-        .onAppear { vm.startLiveRefresh() }
-        .onDisappear { vm.stopLiveRefresh() }
-        .animation(PersonaTheme.spring(for: personaID), value: vm.activeChamber)
-        .animation(PersonaTheme.spring(for: personaID), value: vm.livingStatus)
+        .onAppear { viewModel.startLiveRefresh() }
+        .onDisappear { viewModel.stopLiveRefresh() }
     }
 
-    // MARK: - Presence Bar
-
-    private func presenceBar(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
-        HStack {
-            Circle()
-                .fill(accent)
-                .frame(width: 8, height: 8)
-                .shadow(color: accent.opacity(0.8), radius: 4)
-
-            Text(vm.activeChamber.displayName)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PersonaTheme.mercurySilver)
-
+    private func sanctumHeader(_ vm: SanctumViewModel, accent: Color) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SANCTUM").font(.caption.weight(.bold)).tracking(3).foregroundStyle(accent)
+                Text("The chamber remembers.").font(.system(size: 27, weight: .semibold, design: .serif)).foregroundStyle(PersonaTheme.mercurySilver)
+            }
             Spacer()
-
-            Text(vm.livingStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.4))
-    }
-
-    // MARK: - Chamber Indicators
-
-    private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
-        HStack(spacing: 12) {
-            chamberChip(
-                name: "Forge",
-                isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "forge"),
-                radius: radius
-            )
-            chamberChip(
-                name: "Eternal",
-                isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "eternal"),
-                radius: radius
-            )
+            Menu {
+                Button("Enter Forge") { activeRealm = .forge }
+                Button("Enter Eternal Observatory") { activeRealm = .observatory }
+                Divider()
+                Button("Memory") { showMemory = true }
+                Button("Codex") { showCodex = true }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title2)
+                    .foregroundStyle(PersonaTheme.mercurySilver)
+                    .padding(8)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
         }
     }
 
-    private func chamberChip(name: String, isAwake: Bool, accent: Color, radius: CGFloat) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(isAwake ? accent : accent.opacity(0.25))
-                .frame(width: 6, height: 6)
-            Text(name)
-                .font(.caption2.weight(isAwake ? .semibold : .regular))
-                .foregroundStyle(isAwake ? PersonaTheme.mercurySilver : .secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.25))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .strokeBorder(accent.opacity(isAwake ? 0.45 : 0.12), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Environmental Signals
-
-    private func environmentalSignals(_ vm: SanctumViewModel, radius: CGFloat) -> some View {
+    private func presenceLine(_ vm: SanctumViewModel, accent: Color) -> some View {
         HStack(spacing: 10) {
-            signalPill(title: "Battery", value: vm.batteryLevelText)
-            signalPill(title: "Network", value: vm.networkStatus)
-            signalPill(title: "Thermal", value: vm.thermalState)
-            signalPill(title: "Health", value: "\(vm.overallHealthScore)")
+            Circle().fill(accent).frame(width: 7, height: 7).shadow(color: accent, radius: 6)
+            Text(vm.livingStatus).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver)
+            Spacer()
+            Text(vm.activeChamber.displayName.uppercased()).font(.caption2.weight(.bold)).tracking(1.4).foregroundStyle(.secondary)
         }
     }
 
-    private func signalPill(title: String, value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver)
+    private func realmGate(_ vm: SanctumViewModel, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("REALMS").font(.caption2.weight(.bold)).tracking(2).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                RealmCard(title: "Forge", subtitle: "Create", symbol: "flame", accent: PersonaTheme.forgeEmber) { activeRealm = .forge }
+                RealmCard(title: "Eternal", subtitle: "Observe", symbol: "eye", accent: PersonaTheme.eternalViolet) { activeRealm = .observatory }
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.35))
-        )
     }
 
-    // MARK: - Insight
+    private func environmentalSigils(_ vm: SanctumViewModel, accent: Color) -> some View {
+        HStack(spacing: 8) {
+            Sigil(title: "POWER", value: vm.batteryLevelText, accent: accent)
+            Sigil(title: "NETWORK", value: vm.networkStatus, accent: accent)
+            Sigil(title: "THERMAL", value: vm.thermalState, accent: accent)
+            Sigil(title: "HEALTH", value: "\(vm.overallHealthScore)", accent: PersonaTheme.healthColor(vm.overallHealthScore))
+        }
+    }
 
-    private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Insight")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(accent)
-            Text(insight.body)
-                .font(.subheadline)
-                .foregroundStyle(PersonaTheme.mercurySilver)
+    private func insightCard(_ insight: Insight, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("NEXUS WHISPER").font(.caption2.weight(.bold)).tracking(1.6).foregroundStyle(accent)
+            Text(insight.body).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.45))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
-        )
+        .padding(16)
+        .background(.ultraThinMaterial.opacity(0.48), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(accent.opacity(0.22)))
     }
 
-    // MARK: - Ritual Bar
+    private func invocationBar(accent: Color) -> some View {
+        HStack(spacing: 0) {
+            RitualButton(symbol: "bubble.left.and.bubble.right", label: "Invoke") { showAsk = true }
+            RitualButton(symbol: "brain.head.profile", label: "Memory") { showMemory = true }
+            RitualButton(symbol: "book.closed", label: "Codex") { showCodex = true }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial.opacity(0.72))
+        .overlay(alignment: .top) { Rectangle().fill(accent.opacity(0.25)).frame(height: 1) }
+    }
+}
 
-    private func ritualBar(accent: Color) -> some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(accent.opacity(0.2))
-                .frame(height: 1)
+private enum Realm: String, Identifiable { case forge, observatory; var id: String { rawValue } }
 
-            HStack {
-                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Ask") {
-                    showAsk = true
-                }
-                Spacer()
-                ritualButton(systemImage: "brain.head.profile", label: "Memory") {
-                    showMemory = true
-                }
-                Spacer()
-                ritualButton(systemImage: "scroll", label: "Codex") {
-                    showCodex = true
-                }
+private struct SanctumAtmosphere: View {
+    let accent: Color
+    var body: some View {
+        TimelineView(.animation) { context in
+            let pulse = 0.5 + 0.5 * sin(context.date.timeIntervalSinceReferenceDate * 0.55)
+            ZStack {
+                RadialGradient(colors: [accent.opacity(0.18 + pulse * 0.06), .clear], center: .center, startRadius: 20, endRadius: 390)
+                Circle().stroke(accent.opacity(0.07 + pulse * 0.03), lineWidth: 1).frame(width: 330 + pulse * 20)
+                Circle().stroke(PersonaTheme.deepViolet.opacity(0.12), lineWidth: 1).frame(width: 500)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 14)
-            .background(.ultraThinMaterial.opacity(0.5))
+            .blur(radius: 1)
+            .ignoresSafeArea()
         }
     }
+}
 
-    private func ritualButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                Text(label)
-                    .font(.caption2)
+private struct QuicksilverOrb: View {
+    let status: String
+    let accent: Color
+    var body: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let pulse = 0.96 + 0.04 * sin(t * 1.7)
+            ZStack {
+                Circle().fill(accent.opacity(0.08)).frame(width: 245).blur(radius: 22)
+                Circle().stroke(accent.opacity(0.20), lineWidth: 1).frame(width: 198)
+                Circle().fill(AngularGradient(colors: [accent, PersonaTheme.runicViolet, PersonaTheme.mercurySilver, accent], center: .center)).frame(width: 142 * pulse).shadow(color: accent.opacity(0.75), radius: 28)
+                Circle().fill(.black.opacity(0.35)).frame(width: 116 * pulse)
+                Image(systemName: "bolt.horizontal.fill").font(.system(size: 31, weight: .light)).foregroundStyle(PersonaTheme.mercurySilver).rotationEffect(.degrees(sin(t * 0.5) * 8))
             }
-            .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: 260)
+        .accessibilityLabel("Quicksilver presence")
+        .accessibilityValue(status)
+    }
+}
+
+private struct RealmCard: View {
+    let title: String; let subtitle: String; let symbol: String; let accent: Color; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: symbol).font(.title2).foregroundStyle(accent)
+                Spacer()
+                Text(title).font(.headline).foregroundStyle(PersonaTheme.mercurySilver)
+                Text(subtitle.uppercased()).font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
+            .padding(16)
+            .background(.ultraThinMaterial.opacity(0.52), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(accent.opacity(0.24)))
         }
         .buttonStyle(.plain)
     }
 }
 
-// SanctumChamber lives in Core — shared cleanly with MercuryBrain.
+private struct Sigil: View {
+    let title: String; let value: String; let accent: Color
+    var body: some View {
+        VStack(spacing: 4) { Text(title).font(.system(size: 8, weight: .bold)).tracking(1).foregroundStyle(.secondary); Text(value).font(.caption.weight(.semibold)).foregroundStyle(PersonaTheme.mercurySilver).lineLimit(1) }
+            .frame(maxWidth: .infinity).padding(.vertical, 9).background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct RitualButton: View {
+    let symbol: String; let label: String; let action: () -> Void
+    var body: some View { Button(action: action) { VStack(spacing: 4) { Image(systemName: symbol).font(.callout); Text(label).font(.caption2) }.foregroundStyle(PersonaTheme.mercurySilver).frame(maxWidth: .infinity) }.buttonStyle(.plain) }
+}

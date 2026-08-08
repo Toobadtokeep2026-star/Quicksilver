@@ -6,37 +6,34 @@ import Nexus
 
 struct ContentView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: HomeViewModel?
+    @State private var viewModel: HomeViewModel
+
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: HomeViewModel(container: container))
+    }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let vm = viewModel {
-                    dashboard(vm)
-                } else {
-                    ProgressView()
-                        .onAppear { viewModel = HomeViewModel(container: container) }
-                }
-            }
-            .navigationTitle("Mercury")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    NavigationLink { AskView() } label: {
-                        Label("Ask", systemImage: "text.bubble")
-                    }
-                    NavigationLink { DiagnosticsView() } label: {
-                        Label("Diagnostics", systemImage: "waveform.path.ecg")
-                    }
-                    NavigationLink { MemoryView() } label: {
-                        Label("Memory", systemImage: "brain.head.profile")
-                    }
-                    NavigationLink { SettingsView() } label: {
-                        Label("Settings", systemImage: "gearshape")
+            dashboard(viewModel)
+                .navigationTitle("Mercury")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        NavigationLink { AskView(container: container) } label: {
+                            Label("Ask", systemImage: "text.bubble")
+                        }
+                        NavigationLink { DiagnosticsView(container: container) } label: {
+                            Label("Diagnostics", systemImage: "waveform.path.ecg")
+                        }
+                        NavigationLink { MemoryView(container: container) } label: {
+                            Label("Memory", systemImage: "brain.head.profile")
+                        }
+                        NavigationLink { SettingsView(container: container) } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
                     }
                 }
-            }
-            .background(PersonaTheme.cosmicBlack.ignoresSafeArea())
+                .background(PersonaTheme.cosmicBlack.ignoresSafeArea())
         }
         .preferredColorScheme(.dark)
     }
@@ -50,9 +47,7 @@ struct ContentView: View {
 
         ScrollView {
             VStack(spacing: spacing) {
-                // Living status — insight-first, not raw metrics
                 livingStatusCard(vm, accent: accent, radius: radius)
-
                 personaHeader(vm, accent: accent, radius: radius)
                 personaSwitcher(vm)
                 nexusStatusCard(vm, radius: radius)
@@ -79,16 +74,11 @@ struct ContentView: View {
 
     private func livingStatusCard(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
-            Circle()
-                .fill(accent)
-                .frame(width: 8, height: 8)
-                .opacity(0.9)
-
+            Circle().fill(accent).frame(width: 8, height: 8).opacity(0.9)
             Text(vm.livingStatus)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(PersonaTheme.mercurySilver)
                 .lineLimit(2)
-
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -107,18 +97,11 @@ struct ContentView: View {
                     .font(.largeTitle.weight(.semibold))
                     .foregroundStyle(PersonaTheme.mercurySilver)
                 Spacer()
-                Circle()
-                    .fill(accent)
-                    .frame(width: 12, height: 12)
-                    .shadow(color: accent.opacity(0.6), radius: 6)
+                Circle().fill(accent).frame(width: 12, height: 12).shadow(color: accent.opacity(0.6), radius: 6)
             }
-            Text(vm.personaDescription)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            Text(vm.personaDescription).font(.subheadline).foregroundStyle(.secondary)
             if let reason = vm.lastSwitchReason {
-                Text("Switched: \(reason)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                Text("Switched: \(reason)").font(.caption2).foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -180,9 +163,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: systemImage).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.subheadline.weight(.semibold)).lineLimit(1)
-            if let subtitle {
-                Text(subtitle).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-            }
+            if let subtitle { Text(subtitle).font(.caption2).foregroundStyle(.tertiary).lineLimit(1) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -195,15 +176,11 @@ struct ContentView: View {
             HStack {
                 Label("Latest Insight", systemImage: "sparkles").font(.headline)
                 Spacer()
-                Text(display.styleLabel)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(accent)
+                Text(display.styleLabel).font(.caption.weight(.medium)).foregroundStyle(accent)
             }
             Text(display.title).font(.subheadline.weight(.medium))
             Text(display.body).font(.caption).foregroundStyle(.secondary)
-            if let action = display.action {
-                Text(action).font(.caption2).foregroundStyle(.tertiary)
-            }
+            if let action = display.action { Text(action).font(.caption2).foregroundStyle(.tertiary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()

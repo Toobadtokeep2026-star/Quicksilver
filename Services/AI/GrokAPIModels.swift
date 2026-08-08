@@ -5,12 +5,20 @@ enum GrokAPI {
         let model: String
         let messages: [Message]
         let temperature: Double
-        let max_tokens: Int
+        let maxTokens: Int
         let stream: Bool
 
         struct Message: Encodable {
             let role: String
             let content: String
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case model
+            case messages
+            case temperature
+            case maxTokens = "max_tokens"
+            case stream
         }
     }
 
@@ -21,7 +29,12 @@ enum GrokAPI {
 
         struct Choice: Decodable {
             let message: Message
-            let finish_reason: String?
+            let finishReason: String?
+
+            enum CodingKeys: String, CodingKey {
+                case message
+                case finishReason = "finish_reason"
+            }
         }
 
         struct Message: Decodable {
@@ -30,9 +43,15 @@ enum GrokAPI {
         }
 
         struct Usage: Decodable {
-            let prompt_tokens: Int?
-            let completion_tokens: Int?
-            let total_tokens: Int?
+            let promptTokens: Int?
+            let completionTokens: Int?
+            let totalTokens: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case promptTokens = "prompt_tokens"
+                case completionTokens = "completion_tokens"
+                case totalTokens = "total_tokens"
+            }
         }
     }
 }

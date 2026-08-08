@@ -31,14 +31,20 @@ final class MemoryViewModel {
             personaScope: policy.prefersScopedView ? personaID : nil,
             minimumImportance: policy.retentionThreshold
         )
-        items = container.memoryManager.items(matching: query, retentionThreshold: policy.retentionThreshold)
+        let matchingItems = container.memoryManager.items(
+            matching: query,
+            retentionThreshold: policy.retentionThreshold
+        )
+        items = matchingItems
             .map { item in
                 var copy = item
                 copy.importance = MemoryScorer.decayedImportance(for: item)
                 return copy
             }
             .sorted {
-                if $0.importance != $1.importance { return $0.importance > $1.importance }
+                if $0.importance != $1.importance {
+                    return $0.importance > $1.importance
+                }
                 return $0.updatedAt > $1.updatedAt
             }
         isLoading = false

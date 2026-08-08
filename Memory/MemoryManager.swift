@@ -107,12 +107,17 @@ public final class MemoryManager {
     }
 
     public func clearAll() async {
-        let ids = items.map(\.id)
-        for id in ids {
-            await delete(id: id)
+        guard !items.isEmpty else { return }
+
+        do {
+            try await store.deleteAll()
+            items.removeAll(keepingCapacity: true)
+            // One bulk-update signal instead of one event per deleted item.
+            await eventBus.publish(.memoryDidUpdate(itemID: "all"))
+            logger.info("Memory cleared by user request", category: logger.memory)
+        } catch {
+            logger.error("Failed to clear memory: \(error.localizedDescription)", category: logger.memory)
         }
-        items.removeAll()
-        logger.info("Memory cleared by user request", category: logger.memory)
     }
 
     /// Removes items whose importance is strictly below `threshold`.

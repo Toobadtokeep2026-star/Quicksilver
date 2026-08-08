@@ -16,16 +16,14 @@ public struct GetCurrentPersonaIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
-        }
+        guard let manager = IntentDependencies.shared.personaManager else { throw AppError.nexusNotReady }
         let name = manager.activeConfiguration.displayName
         let id = manager.activeConfiguration.id
         return .result(value: "\(name) (\(id))")
     }
 }
 
-// MARK: - Force Persona (explicit override — uses PersonaEntity)
+// MARK: - Force Persona
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ForcePersonaIntent: AppIntent {
@@ -37,21 +35,17 @@ public struct ForcePersonaIntent: AppIntent {
     public var persona: PersonaEntity
 
     public init() {}
-    public init(persona: PersonaEntity) {
-        self.persona = persona
-    }
+    public init(persona: PersonaEntity) { self.persona = persona }
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
-        }
+        guard let manager = IntentDependencies.shared.personaManager else { throw AppError.nexusNotReady }
         try await manager.switchTo(id: persona.id.lowercased())
         return .result(value: "Forced to \(manager.activeConfiguration.displayName)")
     }
 }
 
-// MARK: - Switch to Forge (high-frequency shortcut)
+// MARK: - Switch to Forge
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct SwitchToForgeIntent: AppIntent {
@@ -63,15 +57,13 @@ public struct SwitchToForgeIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
-        }
+        guard let manager = IntentDependencies.shared.personaManager else { throw AppError.nexusNotReady }
         try await manager.switchTo(id: "forge")
         return .result(value: "Forge is now active")
     }
 }
 
-// MARK: - Capture Memory (now actually persists)
+// MARK: - Capture Memory
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct CaptureMemoryIntent: AppIntent {
@@ -83,16 +75,12 @@ public struct CaptureMemoryIntent: AppIntent {
     public var content: String
 
     public init() {}
-    public init(content: String) {
-        self.content = content
-    }
+    public init(content: String) { self.content = content }
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
         guard let manager = IntentDependencies.shared.personaManager,
-              let memory = IntentDependencies.shared.memoryManager else {
-            throw AppError.nexusNotReady
-        }
+              let memory = IntentDependencies.shared.memoryManager else { throw AppError.nexusNotReady }
 
         let truncated = String(content.prefix(500))
         let personaID = manager.activeConfiguration.id
@@ -134,9 +122,7 @@ public struct GetContextIntent: AppIntent {
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
         guard let manager = IntentDependencies.shared.personaManager,
-              let nexus = IntentDependencies.shared.nexusCoordinator else {
-            throw AppError.nexusNotReady
-        }
+              let nexus = IntentDependencies.shared.nexusCoordinator else { throw AppError.nexusNotReady }
         let persona = manager.activeConfiguration.displayName
         let health = nexus.state.overallHealthScore
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
@@ -145,7 +131,7 @@ public struct GetContextIntent: AppIntent {
     }
 }
 
-// MARK: - Report Status (uses AutomationBridge)
+// MARK: - Report Status
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ReportStatusIntent: AppIntent {
@@ -157,15 +143,13 @@ public struct ReportStatusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let nexus = IntentDependencies.shared.nexusCoordinator else {
-            throw AppError.nexusNotReady
-        }
+        guard let nexus = IntentDependencies.shared.nexusCoordinator else { throw AppError.nexusNotReady }
         let report = try nexus.bridge.triggerDiagnostic(named: "full")
         return .result(value: report)
     }
 }
 
-// MARK: - Open Diagnostics (surfaces DiagnosticsView via App Intent)
+// MARK: - Open Diagnostics
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct OpenDiagnosticsIntent: AppIntent {
@@ -177,13 +161,11 @@ public struct OpenDiagnosticsIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult {
-        // openAppWhenRun = true is the primary surface.
-        // Future: deep-link via URL or NotificationCenter if needed.
         return .result()
     }
 }
 
-// MARK: - Query Nexus (wired to AIService)
+// MARK: - Query Nexus
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
@@ -195,43 +177,30 @@ public struct QueryNexusIntent: AppIntent {
     public var query: String
 
     public init() {}
-    public init(query: String) {
-        self.query = query
-    }
+    public init(query: String) { self.query = query }
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
         guard let manager = IntentDependencies.shared.personaManager,
-              let ai = IntentDependencies.shared.aiService else {
-            throw AppError.nexusNotReady
-        }
+              let ai = IntentDependencies.shared.aiService else { throw AppError.nexusNotReady }
 
         let lower = query.lowercased()
         let intent: QueryIntent
         let kind: TaskKind
 
         if containsAny(lower, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision"]) {
-            intent = .preciseTechnical
-            kind = .building
+            intent = .preciseTechnical; kind = .building
         } else if containsAny(lower, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity"]) {
-            intent = .reflective
-            kind = .reflecting
+            intent = .reflective; kind = .reflecting
         } else if containsAny(lower, ["idea", "brainstorm", "what if", "explore", "creative", "option", "strategy"]) {
-            intent = .creative
-            kind = .exploring
+            intent = .creative; kind = .exploring
         } else if containsAny(lower, ["diagnose", "why is", "broken", "failing"]) {
-            intent = .diagnostic
-            kind = .debugging
+            intent = .diagnostic; kind = .debugging
         } else {
-            intent = .strategic
-            kind = .exploring
+            intent = .strategic; kind = .exploring
         }
 
-        manager.updateTaskContext(
-            description: query,
-            kind: kind,
-            queryIntent: intent
-        )
+        manager.updateTaskContext(description: query, kind: kind, queryIntent: intent)
 
         let config = manager.activeConfiguration
         let response = try await ai.complete(
@@ -249,13 +218,12 @@ public struct QueryNexusIntent: AppIntent {
     }
 }
 
-// MARK: - App Shortcuts provider (≤ 10 hard limit)
+// MARK: - App Shortcuts provider
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QuicksilverShortcuts: AppShortcutsProvider {
     @AppShortcutsBuilder
     public static var appShortcuts: [AppShortcut] {
-        // 1
         AppShortcut(
             intent: GetCurrentPersonaIntent(),
             phrases: [
@@ -266,18 +234,16 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Current Persona",
             systemImageName: "person.crop.circle"
         )
-        // 2
         AppShortcut(
             intent: SwitchToForgeIntent(),
             phrases: [
                 "Switch to Forge in \(.applicationName)",
-                "Activate Forge persona",
-                "Start building with Forge"
+                "Activate Forge persona in \(.applicationName)",
+                "Start building with Forge in \(.applicationName)"
             ],
             shortTitle: "Switch to Forge",
             systemImageName: "hammer.fill"
         )
-        // 3
         AppShortcut(
             intent: GetContextIntent(),
             phrases: [
@@ -288,7 +254,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Context",
             systemImageName: "info.circle"
         )
-        // 4
         AppShortcut(
             intent: ReportStatusIntent(),
             phrases: [
@@ -299,7 +264,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Full Status",
             systemImageName: "waveform.path.ecg"
         )
-        // 5
         AppShortcut(
             intent: OpenDiagnosticsIntent(),
             phrases: [
@@ -309,7 +273,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Open Diagnostics",
             systemImageName: "stethoscope"
         )
-        // 6
         AppShortcut(
             intent: CaptureMemoryIntent(content: ""),
             phrases: [
@@ -320,7 +283,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Remember",
             systemImageName: "brain.head.profile"
         )
-        // 7
         AppShortcut(
             intent: QueryNexusIntent(query: ""),
             phrases: [
@@ -331,8 +293,5 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
-        // ForcePersonaIntent remains available in the Shortcuts app and via Siri
-        // but is intentionally not promoted to an App Shortcut so we stay under the 10 limit
-        // and keep the highest-frequency actions in the automatic surface.
     }
 }

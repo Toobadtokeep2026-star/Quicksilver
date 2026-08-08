@@ -23,6 +23,10 @@ public actor InMemoryMemoryStore: MemoryStore {
         items.removeAll { $0.id == id }
     }
 
+    public func deleteAll() async throws {
+        items.removeAll(keepingCapacity: false)
+    }
+
     public func deleteAll(in category: MemoryItem.Category) async throws {
         items.removeAll { $0.category == category }
     }

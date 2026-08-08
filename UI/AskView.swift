@@ -2,19 +2,16 @@ import SwiftUI
 
 struct AskView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: AskViewModel?
+    @State private var viewModel: AskViewModel
+
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: AskViewModel(container: container))
+    }
 
     var body: some View {
-        Group {
-            if let vm = viewModel {
-                content(vm)
-            } else {
-                ProgressView()
-                    .onAppear { viewModel = AskViewModel(container: container) }
-            }
-        }
-        .navigationTitle("Ask")
-        .navigationBarTitleDisplayMode(.inline)
+        content(viewModel)
+            .navigationTitle("Ask")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder

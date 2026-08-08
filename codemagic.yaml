@@ -1,0 +1,75 @@
+# Codemagic CI configuration (iOS)
+#
+# Default workflow: build, run tests on simulator, archive Release, and export IPA.
+# You may need to update the SCHEME variable below to match the Xcode scheme in this repo
+# and provide an ExportOptions.plist if code signing/export requires custom options.
+
+workflows:
+  ios-default:
+    name: iOS Build, Test & Archive
+    max_build_duration: 120
+    environment:
+      xcode: latest
+      vars:
+        # Set your Xcode scheme name here (change if your scheme uses a different name)
+        SCHEME: Quicksilver
+        # Export method: app-store, ad-hoc, enterprise, development
+        EXPORT_METHOD: ad-hoc
+    scripts:
+      - name: Install dependencies
+        script: |
+          set -e
+          echo "Installing dependencies..."
+          if [ -f Podfile ]; then
+            gem install cocoapods --no-document || true
+            pod repo update || true
+            pod install --project-directory=.
+          fi
+          if [ -f Cartfile ]; then
+            brew install carthage || true
+            carthage bootstrap --platform iOS --cache-builds
+          fi
+      - name: Run unit tests (simulator)
+        script: |
+          set -e
+          echo "Running tests for scheme: $SCHEME"
+          xcodebuild test -scheme "$SCHEME" -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.0' -configuration Debug
+      - name: Archive (device)
+        script: |
+          set -e
+          echo "Archiving scheme: $SCHEME"
+          ARCHIVE_PATH="$CM_BUILD_DIR/$SCHEME.xcarchive"
+          xcodebuild -scheme "$SCHEME" -configuration Release -sdk iphoneos -allowProvisioningUpdates archive -archivePath "$ARCHIVE_PATH"
+          echo "Exporting IPA"
+          EXPORT_DIR="$CM_BUILD_DIR/export"
+          mkdir -p "$EXPORT_DIR"
+          # If you have an ExportOptions.plist in the repo root, xcodebuild will use it. Otherwise adjust as needed.
+          if [ -f ExportOptions.plist ]; then
+            xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportPath "$EXPORT_DIR" -exportOptionsPlist ExportOptions.plist
+          else
+            # Try a basic export with the chosen method (may require automatic signing to be configured in the project)
+            /usr/bin/xcrun xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportPath "$EXPORT_DIR" -exportOptionsPlist <(cat <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>${EXPORT_METHOD}</string>
+  <key>compileBitcode</key>
+  <false/>
+  <key>signingStyle</key>
+  <string>automatic</string>
+</dict>
+</plist>
+EOF
+)
+          fi
+    artifacts:
+      - "$CM_BUILD_DIR/export/*.ipa"
+
+    publishing:
+      scripts:
+        - name: Print artifact path
+          script: |
+            echo "Exported artifacts are in: $CM_BUILD_DIR/export"
+            ls -la "$CM_BUILD_DIR/export" || true

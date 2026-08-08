@@ -2,19 +2,16 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: SettingsViewModel?
+    @State private var viewModel: SettingsViewModel
+
+    init(container: DependencyContainer) {
+        _viewModel = State(initialValue: SettingsViewModel(container: container))
+    }
 
     var body: some View {
-        Group {
-            if let vm = viewModel {
-                content(vm)
-            } else {
-                ProgressView()
-                    .onAppear { viewModel = SettingsViewModel(container: container) }
-            }
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        content(viewModel)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder
@@ -55,15 +52,11 @@ struct SettingsView: View {
                 .textContentType(.password)
                 .autocorrectionDisabled()
 
-                Button("Save Key") {
-                    vm.saveAPIKey()
-                }
-                .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Save Key") { vm.saveAPIKey() }
+                    .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 if vm.hasStoredKey {
-                    Button("Remove Key", role: .destructive) {
-                        vm.clearAPIKey()
-                    }
+                    Button("Remove Key", role: .destructive) { vm.clearAPIKey() }
                 }
             }
 

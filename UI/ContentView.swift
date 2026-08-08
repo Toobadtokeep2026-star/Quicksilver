@@ -6,5 +6,6 @@ struct ContentView: View {
 
     var body: some View {
         SanctumView(container: container)
+            .accessibilityIdentifier("mercury.sanctum")
     }
 }

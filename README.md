@@ -4,11 +4,23 @@ Native iOS intelligence framework: modular architecture, adaptive personas, Nexu
 
 **Primary device target:** iPhone 14 / **iOS 27**  
 **Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
-**Current ship:** 0.1.0 (**build 6**)
+**Current ship:** 0.1.0 (**build 6**) + Forge Sprint (five phases)
 
 ```
-SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
+SENSE (Nexus) → THINK (MercuryBrain + Memory + AI) → EXPRESS (Personas + UI)
 ```
+
+## Latest: Forge Sprint (Five Phases)
+
+Branch `forge/sprint-five-phases` advances:
+
+1. **Brain + Memory fusion** — every `ask` retrieves and injects ranked, persona-scoped memory.
+2. **Agency hardening** — unified intelligence surface ready for Shortcuts / Siri / automations.
+3. **On-device scaffolding** — `LocalIntentClassifier` is the explicit Core ML / Apple Intelligence extension point.
+4. **Presence reactivity** — living status, insights, and chamber suggestion respond to real Nexus signals.
+5. **Adaptive foundations** — personality micro-updates + memory consolidation hook.
+
+See [Documentation/SPRINT_FIVE_PHASES.md](Documentation/SPRINT_FIVE_PHASES.md).
 
 ## Cloud development (no local Mac required)
 
@@ -31,6 +43,7 @@ Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhon
 
 - **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
 - **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
+- **Forge Sprint** — Brain memory fusion, LocalIntentClassifier, reactive presence, consolidation. See sprint doc.
 - SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
@@ -47,7 +60,7 @@ Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhon
 
 [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md)
 
-Core owns contracts. Modules implement. UI only presents. Nexus stays persona-agnostic.
+Core owns contracts. Modules implement. UI only presents. Nexus stays persona-agnostic. MercuryBrain is the single intelligence coordinator.
 
 ## Local Mac workflow (optional)
 

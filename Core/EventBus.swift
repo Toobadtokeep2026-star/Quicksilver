@@ -25,7 +25,7 @@ public actor EventBus {
         case night
     }
 
-    private var subscribers: [UUID: (Event) -> Void] = [:]
+    private var subscribers: [UUID: @Sendable (Event) -> Void] = [:]
 
     public init() {}
 
@@ -39,9 +39,13 @@ public actor EventBus {
         subscribers.removeValue(forKey: id)
     }
 
+    /// Fans events out asynchronously so a slow subscriber cannot block the bus.
     public func publish(_ event: Event) {
-        for handler in subscribers.values {
-            handler(event)
+        let handlers = Array(subscribers.values)
+        for handler in handlers {
+            Task.detached(priority: .utility) {
+                handler(event)
+            }
         }
     }
 }
